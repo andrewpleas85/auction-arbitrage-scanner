@@ -1,0 +1,13 @@
+{
+  "lot_id": "EXAMPLE-001",
+  "title": "Returns pallet - electronics",
+  "opening_bid": 400,
+  "shipping": 120,
+  "url": "https://bstock.com/",
+  "location": "Dallas, TX",
+  "end_time": "2026-10-20T18:00:00+00:00",
+  "items": [
+    {"title": "Sony WH-1000XM4 Wireless Headphones", "qty": 6},
+    {"title": "Fluke 117 Digital Multimeter", "qty": 2}
+  ]
+}

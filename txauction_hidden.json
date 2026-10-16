@@ -1,0 +1,6 @@
+{
+  "_note": "TXAuction lots hidden from the page (key = auction id - lot number). Add a key to hide a lot; syncs will not bring it back.",
+  "hidden": [
+    "31543-309"
+  ]
+}

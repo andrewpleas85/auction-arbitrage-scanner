@@ -1,0 +1,39 @@
+{
+  "auctions": [
+    {
+      "id": "txauction-31543",
+      "source": "TXAuction (Gaston & Sheehan)",
+      "name": "Austin Police & City of Austin Jewelry & Bullion Online Auction",
+      "url": "https://www.txauction.com/auctions/31543-austin-police-and-city-of-austin-jewelry-and-bullion-online-auction",
+      "location": "Pflugerville, TX",
+      "buyer_premium": 0.10,
+      "ship_in": 15.0,
+      "as_of": "2026-10-12",
+      "spot_fallback": {"gold": 4196.0, "silver": 61.0, "as_of": "2026-10-10"},
+      "notes": "New bidders need a $100 deposit and up to one business day for approval. Lots are as-is, in Pflugerville TX. Shipping: quote from the site's Shipping Quote button plus a packaging fee, insured with adult signature; pickup within 7 days; payment within 4 business days; Texas sales tax may apply unless you give a resale number. Bids are as of the last sync and the auction extends if bids land near the close. Lot pages are not linked because the site's robots.txt disallows them; use the auction page.",
+      "lots": [
+        {"lot": 300, "title": "14KT BRACELET, 10.4 GRAMS", "bid": 650, "bids": 1, "gold": [[14, 10.4]]},
+        {"lot": 308, "title": "10KT PENDANT-1.4 GRAMS, 14KT RING- 2.3 GRAMS", "bid": 100, "bids": 0, "gold": [[10, 1.4], [14, 2.3]]},
+        {"lot": 317, "title": "18KT EARRING, 7.1 GRAMS", "bid": 500, "bids": 0, "gold": [[18, 7.1]]},
+        {"lot": 319, "title": "10KT EARRING, 1.0 GRAMS", "bid": 30, "bids": 2, "gold": [[10, 1.0]]},
+        {"lot": 322, "title": "10KT RING, 6.2 GRAMS", "bid": 235, "bids": 2, "gold": [[10, 6.2]]},
+        {"lot": 323, "title": "14KT RING, 4.5 GRAMS, SIZE 5", "bid": 210, "bids": 2, "gold": [[14, 4.5]]},
+        {"lot": 324, "title": "14KT RING, 5.9 GRAMS", "bid": 328, "bids": 133, "gold": [[14, 5.9]]},
+        {"lot": 325, "title": "[2] RINGS MARKED 14K, 8 GRAMS TOTAL, 10KT BAE SYSTEMS PIN, 3 GRA... (title cut off on the page; 3 grams assumed)", "bid": 305, "bids": 6, "gold": [[14, 8.0], [10, 3.0]]},
+        {"lot": 326, "title": "10KT RING, 4 GRAMS", "bid": 150, "bids": 1, "gold": [[10, 4.0]]},
+        {"lot": 329, "title": "10KT RING, 2.4 GRAMS", "bid": 105, "bids": 14, "gold": [[10, 2.4]]},
+        {"lot": 330, "title": "14KT RINGS, 5.5 GRAMS", "bid": 350, "bids": 1, "gold": [[14, 5.5]]},
+        {"lot": 337, "title": "14KT CHAIN, NO CLASP, 3.4 GRAMS, 10KT PENDANT, 0.8 GRAMS", "bid": 210, "bids": 3, "gold": [[14, 3.4], [10, 0.8]]},
+        {"lot": 338, "title": "10KT PIN, 1 GRAM", "bid": 25, "bids": 1, "gold": [[10, 1.0]]},
+        {"lot": 312, "title": "[3] 1 OZ .999 SILVER ROUNDS", "bid": 185, "bids": 9, "silver": [[0.999, 93.31]], "bullion": true},
+        {"lot": 321, "title": "STERLING SILVER CURB CHAIN, 44.6 GRAMS", "bid": 45, "bids": 4, "silver": [[0.925, 44.6]]},
+        {"lot": 314, "title": "STAMPED 925 STERLING SILVER BRACELET, 20.3 GRAMS, 7.5\"", "bid": 27, "bids": 12, "silver": [[0.925, 20.3]]},
+        {"lot": 328, "title": "STERLING SILVER RING, 15.9 GRAMS, SIZE 9", "bid": 46, "bids": 16, "silver": [[0.925, 15.9]]},
+        {"lot": 304, "title": "EARRINGS AND PENDANT STAMPED 925, 6.2 GRAMS", "bid": 7, "bids": 2, "silver": [[0.925, 6.2]]},
+        {"lot": 301, "title": "EARRING STAMPED 925, 5.5 GRAMS", "bid": 9, "bids": 3, "silver": [[0.925, 5.5]]},
+        {"lot": 302, "title": "[2] NECKLACES STAMPED 925, 8.0 GRAMS", "bid": 9, "bids": 3, "silver": [[0.925, 8.0]]},
+        {"lot": 327, "title": "STAMPED STERLING NECKLACE WITH BOW PENDANT WITH CASE, 5.6 GRAMS", "bid": 7, "bids": 2, "silver": [[0.925, 5.6]]}
+      ]
+    }
+  ]
+}

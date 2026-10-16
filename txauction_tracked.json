@@ -1,0 +1,13 @@
+{
+  "_note": "TXAuction lots on your list (key = auction id - lot number). They always show on the page, whatever the filters, and are marked as yours. Optional max_bid is your own ceiling.",
+  "tracked": {
+    "31520-903": {
+      "max_bid": null,
+      "note": "Prada zebra satchel: expected about $1,250 resale"
+    },
+    "31520-904": {
+      "max_bid": null,
+      "note": "2 Gucci Pelham bags (tote + ostrich hobo): expected $700-$1,000"
+    }
+  }
+}

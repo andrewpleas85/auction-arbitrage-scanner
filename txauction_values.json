@@ -1,0 +1,137 @@
+{
+  "_note": "Hand-set resale estimates (eBay sold, 2026-10-12 SoldComps lookups, 1 request each) for TXAuction lots. 'value' is the typical used resale after condition; low/high bracket it.",
+  "31520-918": {
+    "value": 3800,
+    "low": 3000,
+    "high": 4800,
+    "basis": "28 sold Chanel jumbo caviar flaps, typical $4,900; discounted for creasing and finish loss"
+  },
+  "31520-920": {
+    "value": 3000,
+    "low": 2400,
+    "high": 3620,
+    "basis": "only 2 sold 2.55 Reissue 227 bags ($2,400, $3,620): thin"
+  },
+  "31520-906": {
+    "value": 1200,
+    "low": 1000,
+    "high": 1400,
+    "basis": "6 sold Keepall Bandouliere 55 Damier Graphite $1,200-$1,615; discounted for missing padlock and keys, creasing"
+  },
+  "31520-909": {
+    "value": 800,
+    "low": 600,
+    "high": 1279,
+    "basis": "48 sold medium Lady Dior bags $185-$2,995; red patent $1,279-$2,391; discounted for peeling"
+  },
+  "31520-932": {
+    "value": 3600,
+    "low": 3000,
+    "high": 4800,
+    "basis": "4 real sold Chanel 19 Large flaps $850-$6,050: thin"
+  },
+  "31520-933": {
+    "value": 3600,
+    "low": 3000,
+    "high": 4800,
+    "basis": "same as lot 932"
+  },
+  "31520-934": {
+    "value": 3600,
+    "low": 3000,
+    "high": 4800,
+    "basis": "same as lot 932"
+  },
+  "31543-305": {
+    "value": 80,
+    "low": 55,
+    "high": 140,
+    "basis": "eBay active asks (2026-10-12, free Browse API); sold prices run below asks, so valued at about 70% of the low-middle of the asks. Tory Burch logo drop earrings ask $45-$65 (median $55); the pendant is unmarked: about $10 if plated, $60-$85 if small solid gold",
+    "brand": "Tory Burch"
+  },
+  "31543-339": {
+    "value": 90,
+    "low": 65,
+    "high": 130,
+    "basis": "eBay active asks (2026-10-12, free Browse API); sold prices run below asks, so valued at about 70% of the low-middle of the asks. vintage D&B all-weather leather bucket bag + matching wallet: sets ask $93-$200 (median $124-$139); plain bags $30-$50",
+    "brand": "Dooney & Bourke"
+  },
+  "31543-311": {
+    "value": 180,
+    "low": 120,
+    "high": 280,
+    "basis": "eBay active asks (2026-10-12, free Browse API); sold prices run below asks, so valued at about 70% of the low-middle of the asks. TAG Heuer 2000-series quartz asks run $200 (worn gold quartz) to $500+ (clean); this one has a worn case and faded dial; not authenticated",
+    "brand": "TAG Heuer"
+  },
+  "31543-299": {
+    "value": 260,
+    "low": 190,
+    "high": 380,
+    "basis": "eBay active asks (2026-10-12, free Browse API); sold prices run below asks, so valued at about 70% of the low-middle of the asks. small 14k white gold diamond wedding sets ask $219-$650; stones look small; gold probably 3-4 g (melt about $230-$310 at 85-90% of spot); weight not stated"
+  },
+  "31543-313": {
+    "value": 65,
+    "low": 45,
+    "high": 100,
+    "basis": "eBay active asks (2026-10-12, free Browse API); sold prices run below asks, so valued at about 70% of the low-middle of the asks. small thin 14k cross pendants ask $80-$115; melt about $45-$80 at 0.6-1 g (14k about $78/g at spot)"
+  },
+  "31543-310": {
+    "value": 25,
+    "low": 15,
+    "high": 45,
+    "basis": "eBay active asks (2026-10-12, free Browse API); sold prices run below asks, so valued at about 70% of the low-middle of the asks. mixed costume jewelry lots ask $30-$108 (median $45); photo shows silver-tone chains, a leaf pendant, a gold-tone ring, a cameo stud"
+  },
+  "31543-320": {
+    "value": 20,
+    "low": 10,
+    "high": 40,
+    "basis": "western copper/turquoise-style charm bracelet, glass dichroic cross, copper cuff ring: costume; very few comparable listings"
+  },
+  "31543-334": {
+    "value": 25,
+    "low": 15,
+    "high": 45,
+    "basis": "eBay active asks (2026-10-12, free Browse API); sold prices run below asks, so valued at about 70% of the low-middle of the asks. lots of fashion watches ask $30-$59 (median $37); 4 watches, 2 damaged"
+  },
+  "31543-316": {
+    "value": 60,
+    "low": 40,
+    "high": 100,
+    "brand": "Hamilton",
+    "basis": "eBay active asks (2026-10-12); sold runs below asks, valued at about 70% of the low-middle, adjusted for condition. vintage ladies Hamilton 10k gold-filled cocktail watches ask $62-$135 (median $82); Field Ranger quartz asks $17-$32 (median $20); the Hamilton is mechanical and may need servicing"
+  },
+  "31543-336": {
+    "value": 30,
+    "low": 20,
+    "high": 50,
+    "basis": "eBay active asks (2026-10-12, free Browse API); sold prices run below asks, so valued at about 70% of the low-middle of the asks. bead/hematite/faux-pearl necklace lots ask $30-$57 (median $42)"
+  },
+  "31543-318": {
+    "value": 35,
+    "low": 20,
+    "high": 60,
+    "basis": "eBay active asks (2026-10-12); sold runs below asks, valued at about 70% of the low-middle, adjusted for condition. sterling spoon/seal-style rings ask $25-$127 (median $50, n=29); plain twisted sterling stacker band about $10; the wide ring's seal text reads as a Texas university seal (the photo is too small to say which)"
+  },
+  "31543-315": {
+    "value": 20,
+    "low": 12,
+    "high": 35,
+    "basis": "eBay active asks (2026-10-12); sold runs below asks, valued at about 70% of the low-middle, adjusted for condition. sterling marcasite rings with a green stone ask $25-$50 (median $35); the photo shows one green square stone with marcasite, not the quad-stone model"
+  },
+  "31520-903": {
+    "value": 1250,
+    "low": 800,
+    "high": 1500,
+    "brand": "Prada",
+    "basis": "hand-set estimate: sells around $1,250. For comparison, eBay asks for zebra/leopard pony-hair Prada bags run $534-$2,975 (median $830-$1,112, 17-35 listings), no sold prices; pony hair wears and sheds; the auction gives no authenticity guarantee"
+  },
+  "31520-904": {
+    "value": 850,
+    "low": 600,
+    "high": 1000,
+    "brand": "Gucci",
+    "ship_in": 45,
+    "ship_out": 28,
+    "basis": "hand-set estimate: the lot resells for about $700-$1,000. Two Gucci Pelham pieces (a black leather tote and a beige ostrich hobo), both used with flaws (tag splitting, frayed stitching/straps, a large liquid stain on the hobo). eBay asks: Pelham totes $430-$875 (median $650-$724), ostrich hobos $200-$800 (only 10 listings); asks, not sold prices. Shipping assumed for two bags"
+  }
+}
