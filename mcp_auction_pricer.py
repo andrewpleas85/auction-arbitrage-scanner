@@ -76,10 +76,12 @@ def _stored_sales(conn: sqlite3.Connection, query: str) -> list[tuple[str, float
     toks = kb.item_key(query).split()
     if not toks:
         return []
-    rows = _SALES_CACHE.get("rows")
+    key = (conn.execute("PRAGMA database_list").fetchone()[2], conn.execute("SELECT COUNT(*) FROM sold_sales").fetchone()[0])
+    rows = _SALES_CACHE.get(key)  # keyed on the database file and its row count, so a different or grown database is re-read
     if rows is None:
-        rows = _SALES_CACHE["rows"] = [(r["title"], r["price"], r["sold_date"], set(kb.item_key(r["title"]).split()))
-                                       for r in conn.execute("SELECT DISTINCT title, price, sold_date FROM sold_sales")]
+        _SALES_CACHE.clear()
+        rows = _SALES_CACHE[key] = [(r[0], r[1], r[2], set(kb.item_key(r[0]).split()))
+                                    for r in conn.execute("SELECT DISTINCT title, price, sold_date FROM sold_sales")]
     out = []
     for title, price, sold_date, have in rows:
         if all(t in have for t in toks):

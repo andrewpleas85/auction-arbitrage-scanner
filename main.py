@@ -592,6 +592,7 @@ async def amain() -> None:
     ap.add_argument("--tracked", action="store_true", help="print your tracked list")
     ap.add_argument("--web-all", action="store_true", help="put EVERY profitable item on the page, sortable as a whole (refresh takes longer)")
     ap.add_argument("--sync-txauction", action="store_true", help="re-read the TXAuction auction pages listed in txauction.py (about 4 requests)")
+    ap.add_argument("--import-facebook", metavar="FILE", help="load a Facebook Marketplace export (JSON or CSV) and print the confidence-gate result for every listing; no network, no paid quota")
     ap.add_argument("--serve", action="store_true", help="serve the page at http://127.0.0.1:PORT (this machine only)")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--lan", action="store_true", help="with --serve: let other computers on your local network open the page (no password)")
@@ -773,6 +774,14 @@ async def amain() -> None:
             print(f"{r['status']:<34} {r['listings']:>3} listings  {r['name'][:34]:<34}{extra}")
         print(f"{len(res)} groups" + (" (dry run, nothing spent)" if args.dry_run_ranges else ""))
         return
+    if args.import_facebook:
+        import fb_market
+        conn = db.connect(cfg.db_path)
+        print(fb_market.import_file(conn, args.import_facebook))
+        for r in fb_market.assess_all(conn):
+            ev = r["evidence"]
+            print(f"[{r['status'].upper():10}] ${r['buy']:,.0f}  {r['title'][:60]}  " + (f"net ${ev['net']:,.0f} via {ev['best_channel']}, max buy ${ev['max_buy']:,.0f}" if r["status"] == "verified" else f"FAILED: {r['failed']} ({r['failures'][0]['why']})"))
+        return
     if args.sync_txauction:
         import txauction
         async with httpx.AsyncClient(timeout=40) as tx_http:
@@ -838,7 +847,16 @@ async def amain() -> None:
             watch_rows = [w for w in watch_rows if w.get("source") != "TXAuction"]  # Texas lots live in the main table; the lower list is everything else
             import batch_evaluate  # spec-matched pricer over every open lot (stored sold sales only: no network, no quota)
             picks, _n, _c = batch_evaluate.run()
-            path = webpage.write_site(site / "index.html", rows, args.web_refresh, watch=watch_rows, scrap=scrap_auctions, picks=picks)
+            import page_gate
+            gate_payload = page_gate.page_payload(conn, rows)  # the verified gate: only verified rows stay in the main table
+            rows = gate_payload["main"]
+            import fb_market
+            fb_payload = fb_market.page_payload(conn)  # Marketplace rows the owner imported; empty until a file is loaded
+            import luxury_goods
+            lux_payload = luxury_goods.page_payload(conn, snap=tx_snap)
+            path = webpage.write_site(site / "index.html", rows, args.web_refresh, watch=watch_rows, scrap=scrap_auctions, picks=picks,
+                                      fb=fb_payload if fb_payload["verified"] or fb_payload["unverified"] else None,
+                                      lux=lux_payload if lux_payload["verified"] or lux_payload["unverified"] else None, gate=gate_payload)
             print(f"wrote {path} with {len(rows)} items" + ("" if args.web_refresh else " (bids as of the last crawl)"))
         if args.serve:
             webpage.serve(site, args.port, lan=args.lan)

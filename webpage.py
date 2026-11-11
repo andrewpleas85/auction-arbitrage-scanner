@@ -768,13 +768,43 @@ details.more{width:100%}details.more>summary{cursor:pointer;color:var(--ink);fon
 <label title="Texas auction lots that have no resale estimate yet are listed with question marks; tick to hide them"><input type="checkbox" id="noest"> Hide lots with no estimate</label>
 <label><input type="checkbox" id="lux"> Designer only</label>
 </div></details>
-<span class="dim" id="count"></span> <a href="#watchbox" id="gowatch" class="bid" style="margin-left:10px;display:none">Watch list: <b id="gowatchn">0</b> lots ↓</a> <a href="#" id="gotx" class="bid" style="margin-left:6px;display:none" title="Shows every valued TXAuction lot in the main table, ignoring the return and closing-date filters">TXAuction in the table: <b id="gotxn">0</b> lots</a> <a href="#picksbox" id="gopicks" class="bid" style="margin-left:6px;display:none">Pricer picks: <b id="gopicksn">0</b> ↓</a> <a href="#scrapbox" id="goscrap" class="bid" style="margin-left:6px;display:none">Scrap lots: <b id="goscrapn">0</b> ↓</a></div></header>
+<span class="dim" id="count"></span> <a href="#watchbox" id="gowatch" class="bid" style="margin-left:10px;display:none">Watch list: <b id="gowatchn">0</b> lots ↓</a> <a href="#" id="gotx" class="bid" style="margin-left:6px;display:none" title="Shows every valued TXAuction lot in the main table, ignoring the return and closing-date filters">TXAuction in the table: <b id="gotxn">0</b> lots</a> <a href="#repbox" id="gorep" class="bid" style="margin-left:6px;display:none">Repair plays: <b id="gorepn">0</b> ↓</a> <a href="#unvbox" id="gounv" class="bid" style="margin-left:6px;display:none">Unverified claims: <b id="gounvn">0</b> ↓</a> <a href="#luxbox" id="golux" class="bid" style="margin-left:6px;display:none">Designer: <b id="goluxn">0</b> verified ↓</a> <a href="#fbbox" id="gofb" class="bid" style="margin-left:6px;display:none">Facebook: <b id="gofbn">0</b> verified ↓</a> <a href="#picksbox" id="gopicks" class="bid" style="margin-left:6px;display:none">Pricer picks: <b id="gopicksn">0</b> ↓</a> <a href="#scrapbox" id="goscrap" class="bid" style="margin-left:6px;display:none">Scrap lots: <b id="goscrapn">0</b> ↓</a></div></header>
 <main><div class="wrap"><table id="t"><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
 <div class="wrap" id="watchbox" style="margin-top:28px" hidden>
 <h2 style="font-size:1.05rem;margin:0 0 4px">Watch list: lots without an eBay sold price</h2>
 <p class="sub" style="margin:0 0 10px">Two groups: lots near Chicago from BidProwl (GovDeals, Public Surplus, Municibid, GSA and others), and TXAuction lots that ship from Texas (US Marshals designer goods, jewelry, watches, coins, art). Not scored against eBay sold prices. A resale estimate shows where one exists: a hand-set value from sold lookups, or gold melt plus diamonds for single-piece jewelry. Pick Source = TXAuction to see the new auctions.</p>
 <label>Source <select id="wsrc"><option value="">all</option></select></label> <label>Type <select id="wtopic"><option value="">all</option></select></label> <label>Distance <select id="wband"><option value="">all</option><option value="near">near only</option><option value="far">worth a drive only</option><option value="ships">ships from Texas</option></select></label> <label><input type="checkbox" id="wval"> Only lots with a resale estimate</label> <span class="dim" id="wcount"></span>
 <table id="wt"><thead><tr><th>Item</th><th>Type</th><th>Source</th><th>Bid now</th><th>Bids</th><th>Est. resale (low-high)</th><th>Ends in</th><th>Where</th></tr></thead><tbody id="wbody"></tbody></table>
+</div>
+<div class="wrap" id="repbox" style="margin-top:28px" hidden>
+<h2 style="font-size:1.05rem;margin:0 0 4px">Repair plays: auction lots that state a repairable defect</h2>
+<p class="sub" style="margin:0 0 10px" id="repnote"></p>
+<table id="rept"><thead><tr><th>Item</th><th>Bid / expected close (all-in)</th><th>As-is (parts) value</th><th>Repaired value and repair estimate</th><th>Net</th><th>Max bid</th><th>Demand</th><th>Verdict</th></tr></thead><tbody id="repbody"></tbody></table>
+</div>
+<div class="wrap" id="unvbox" style="margin-top:28px" hidden>
+<h2 style="font-size:1.05rem;margin:0 0 4px">Unverified claims: old page numbers that failed the verified gate</h2>
+<p class="sub" style="margin:0 0 10px" id="unvnote"></p>
+<div class="bar" style="margin-bottom:8px"><input id="unvq" type="search" placeholder="Search" aria-label="Search unverified"> <label>Failed check <select id="unvfail"><option value="">any</option></select></label> <span class="dim" id="unvcount"></span></div>
+<table id="unvt"><thead><tr><th>Item</th><th>Site</th><th>Bid</th><th>Old claim (UNVERIFIED)</th><th>Failed check</th><th>Why</th></tr></thead><tbody id="unvbody"></tbody></table>
+</div>
+<div class="wrap" id="luxbox" style="margin-top:28px" hidden>
+<h2 style="font-size:1.05rem;margin:0 0 4px">Designer bags and clothing: authenticity first, then damage, condition-matched comps and the right channel</h2>
+<p class="sub" style="margin:0 0 10px" id="luxnote"></p>
+<h3 style="font-size:.95rem;margin:10px 0 4px">Verified (authenticity supported, no value-killing damage, every check passed)</h3>
+<table id="luxvt"><thead><tr><th>Item</th><th>Price at expected close (all-in)</th><th>Authenticity</th><th>Damage and repair</th><th>Value basis (condition-matched comps)</th><th>Channel and demand</th><th>Expected net</th><th>Max price</th></tr></thead><tbody id="luxvbody"></tbody></table>
+<h3 style="font-size:.95rem;margin:18px 0 4px">Unverified: failed a check (not profitable until resolved)</h3>
+<table id="luxut"><thead><tr><th>Item</th><th>Bid</th><th>Failed check</th><th>Why</th><th>Next step</th></tr></thead><tbody id="luxubody"></tbody></table>
+</div>
+<div class="wrap" id="fbbox" style="margin-top:28px" hidden>
+<h2 style="font-size:1.05rem;margin:0 0 4px">Facebook Marketplace: local pickup, strict confidence bar</h2>
+<p class="sub" style="margin:0 0 10px" id="fbnote"></p>
+<div class="bar" style="margin-bottom:8px"><input id="fbq" type="search" placeholder="Search Marketplace items" aria-label="Search Marketplace">
+<label>Channel <select id="fbch"><option value="">all</option><option value="eBay shipped">eBay shipped</option><option value="local cash">local cash</option></select></label>
+<label>Failed check <select id="fbfail"><option value="">any</option></select></label> <span class="dim" id="fbcount"></span></div>
+<h3 style="font-size:.95rem;margin:10px 0 4px">Verified profitable (every check passed)</h3>
+<table id="fbvt"><thead><tr><th>Item</th><th>Ask (buy)</th><th>Sold-comp value</th><th>Sold comps</th><th>Demand</th><th>Best channel</th><th>Net profit</th><th>Return</th><th>Max buy price</th><th>Identity and play</th></tr></thead><tbody id="fbvbody"></tbody></table>
+<h3 style="font-size:.95rem;margin:18px 0 4px">Unverified: needs pricing check (not profitable until the failed check is resolved)</h3>
+<table id="fbut"><thead><tr><th>Item</th><th>Ask</th><th>Failed check</th><th>Why</th><th>Next step</th></tr></thead><tbody id="fbubody"></tbody></table>
 </div>
 <div class="wrap" id="picksbox" style="margin-top:28px" hidden>
 <h2 style="font-size:1.05rem;margin:0 0 4px">Spec-matched pricer: laptops, tablets, drones, cameras, luxury</h2>
@@ -974,6 +1004,80 @@ function renderWatch(){
     return tr;}));
   labelTable("wt");
 }
+function playCell(r){const e=r.evidence, td=el("td","meta"), id=e.identity||{};
+  td.append(el("div","","identity: "+(id.confidence||"?")+" ("+((id.corroborated_by||[]).join("; ")||"no second source")+"); priced as "+(id.price_based_on||"?")));
+  const P=e.plays||{}; const as=P["as-is"], rp=P["repair"];
+  td.append(el("div","","play: "+(e.play||"none")+" ["+(e.condition?e.condition.class.replace("_"," "):"")+"]"));
+  if(as) td.append(el("div","","as-is/parts value "+money(as.value)+" → net "+money(as.net)));
+  if(rp) td.append(el("div","","repaired value "+money(rp.value)+" − repair "+money(rp.repair_cost)+" (estimate) → net "+money(rp.net)+", +"+rp.days_added+" days"));
+  for(const k of (id.risks||[])) td.append(el("div","neg",k));
+  return td;}
+function renderGate(){
+  const G=D.gate; const rb=$("repbox"), ub=$("unvbox");
+  if(!G){rb.hidden=true; ub.hidden=true; return;}
+  const B=G.bar, RP=G.repair, all=RP.verified.concat(RP.unverified);
+  rb.hidden=!all.length; $("gorep").style.display=rb.hidden?"none":"inline-block"; $("gorepn").textContent=String(RP.verified.length);
+  $("repnote").textContent=`These lots state damage with a known fix. Each shows the as-is (parts) value and the repaired-and-sold value side by side. A repair play must clear net ${money(B.min_net)} + a ${money(B.repair_cushion)} repair cushion and ${Math.round(B.min_return*100)}% of all-in cost (buy + repair), on spec-matched sold comps with high identity. Repair costs are labelled estimates, not quotes. The main table's filters are unchanged.`;
+  $("repbody").replaceChildren(...all.map(r=>{const e=r.evidence, tr=el("tr"), P=e.plays||{}, as=P["as-is"], rp=P["repair"], ch=P[e.play||"repair"]||rp||as;
+    const t=el("td","item"); t.append(el("div","title",r.title)); if(r.url){const a=el("a","bid","open listing ↗"); a.href=r.url; a.target="_blank"; a.rel="noopener noreferrer"; t.append(a);} t.append(el("div","meta",r.platform_label||""));
+    const tdR=el("td","meta"); if(rp){tdR.append(el("div","","repaired value "+money(rp.value))); tdR.append(el("div","","repair "+money(rp.repair_cost)+" (ESTIMATE) +"+rp.days_added+" days"));} else tdR.append(el("div","","no value yet"));
+    const tdV=el("td","meta"); if(r.status==="verified") tdV.append(el("div","pos","VERIFIED repair play")); else {tdV.append(el("div","neg",r.failed||"unverified")); for(const f of r.failures) tdV.append(el("div","meta",f.check+": "+f.why));}
+    const d=e.demand; tr.append(t, el("td","num",money(r.bid)+(ch?" → "+money(ch.price_assumed)+" ("+money(ch.all_in)+" all-in)":"")), el("td","num",as?money(as.value)+" (net "+money(as.net)+")":"?"), tdR,
+      el("td","num "+(ch&&ch.net>=B.min_net?"pos":"neg"),ch?money(ch.net)+" ("+Math.round((ch.return||0)*100)+"%)":"?"), el("td","num",ch?money(ch.max_bid):"?"),
+      el("td","meta",d?(d.sold_per_30d+" sold per 30 days; time to sell: "+d.time_to_sell):"no comps"), tdV); return tr;}));
+  labelTable("rept");
+  const U=G.unverified; ub.hidden=!U.length; $("gounv").style.display=ub.hidden?"none":"inline-block"; $("gounvn").textContent=String(U.length);
+  if(ub.hidden) return;
+  $("unvnote").textContent=`These rows used to be ranked as profitable on brand-level baselines, hand-set values or too few matching sold sales. They are NOT profitable until the failed check is resolved. The old numbers are shown only for comparison and are labelled unverified claims.`;
+  const fs=$("unvfail"); if(!fs.dataset.set){fs.dataset.set="1"; for(const c of [...new Set(U.map(x=>x.failed))].sort()){const o=el("option","",c); o.value=c; fs.append(o);} for(const id of ["unvq","unvfail"]) for(const ev of ["input","change"]) $(id).addEventListener(ev,renderGate);}
+  const q=$("unvq").value.toLowerCase(), fl=$("unvfail").value;
+  const L=U.filter(x=>(!q||x.title.toLowerCase().includes(q))&&(!fl||x.failed===fl)).sort((a,b)=>((b.claimed.profit_at_expected_close||-1e9)-(a.claimed.profit_at_expected_close||-1e9)));
+  $("unvcount").textContent=L.length+" of "+U.length+" shown";
+  $("unvbody").replaceChildren(...L.slice(0,400).map(x=>{const tr=el("tr"), t=el("td","item"); t.append(el("div","title",x.title)); if(x.url){const a=el("a","bid","open listing ↗"); a.href=x.url; a.target="_blank"; a.rel="noopener noreferrer"; t.append(a);}
+    const c=x.claimed, tdC=el("td","meta"); tdC.append(el("div","neg","unverified claim: worth "+(c.worth_typ!=null?money(c.worth_typ):"?")+(c.profit_at_expected_close!=null?", profit "+money(c.profit_at_expected_close)+" ("+Math.round((c.return_at_expected_close||0)*100)+"%)":"")+(c.max_bid!=null?", max bid "+money(c.max_bid):""))); if(c.basis) tdC.append(el("div","",c.basis));
+    const why=el("td"); for(const f of x.failures) why.append(el("div","meta",f.check+": "+f.why));
+    tr.append(t, el("td","",x.platform_label||x.platform), el("td","num",money(x.bid)), tdC, el("td","neg",x.failed), why); return tr;}));
+  labelTable("unvt");
+}
+function renderLux(){
+  const L=D.lux; const box=$("luxbox"); box.hidden=!L||(!L.verified.length&&!L.unverified.length); $("golux").style.display=box.hidden?"none":"inline-block";
+  if(box.hidden) return; const B=L.bar;
+  $("goluxn").textContent=String(L.verified.length);
+  $("luxnote").textContent=`No designer item is listed on price math alone. It needs supported or plausible authenticity (counterfeit flags or no proof hard-fail it), no value-killing damage (ink on light leather, mould or strong odour, cracked canvas...), at least ${B.min_comps} sold comps in the SAME condition grade as the item (no flat discount on clean comps), brand-tier demand evidence, and an expected net of at least ${money(B.min_net)} and ${Math.round(B.min_return*100)}% after authentication, fees, repair (plus a ${money(B.repair_cushion)} cushion) and the counterfeit risk. Repair costs, authentication prices, channel fees and the genuine-probability are labelled estimates, not quotes.`;
+  const item=r=>{const t=el("td","item"); t.append(el("div","title",r.title)); if(r.url){const a=el("a","bid","open listing ↗"); a.href=r.url; a.target="_blank"; a.rel="noopener noreferrer"; t.append(a);} t.append(el("div","meta",r.platform_label||"")); return t;};
+  $("luxvbody").replaceChildren(...L.verified.map(r=>{const e=r.evidence, p=e.plays[e.chosen], tr=el("tr"), au=e.authenticity, dm=e.damage;
+    const tdA=el("td","meta"); tdA.append(el("div","",au.verdict+" ("+Math.round(e.auth.probability_genuine*100)+"% assumed genuine)")); tdA.append(el("div","",(au.evidence||[]).join(", ")||"no stated proofs")); tdA.append(el("div","",e.auth.third_party_cost?("third-party authentication "+money(e.auth.third_party_cost)+" priced in"):"already authenticated per listing (verify)"));
+    const tdD=el("td","meta"); if(!dm.items.length) tdD.append(el("div","","no damage stated")); for(const i of dm.items){tdD.append(el("div","",i.label+": "+money(i.cost_low)+"-"+money(i.cost_high)+" ("+i.source.split(";")[0]+")"));} if(dm.items.length) tdD.append(el("div","","repair "+money(dm.repair_low)+"-"+money(dm.repair_high)+"; "+dm.days+" days"));
+    const tdV=el("td","meta"); tdV.append(el("div","","play: "+e.chosen+"; grade "+p.grade+": "+money(p.value)+" ("+p.comps+" comps, "+money(p.low)+"-"+money(p.high)+")")); if(e.clean_median) tdV.append(el("div","","clean (excellent) median "+money(e.clean_median)+"; post-repair discount "+Math.round(e.post_repair_discount*100)+"%")); tdV.append(el("div","","if genuine net "+money(p.net_if_genuine)));
+    const tdC=el("td","meta"); tdC.append(el("div","",p.channel+" (fee "+Math.round(p.channel_fee*100)+"%)")); tdC.append(el("div","","brand tier: "+e.brand_tier+"; "+e.demand.recent_sales_90d+" sold in 90 days (need "+e.demand.recent_needed+"); "+e.demand.sold_per_30d+" sold per 30 days; time to sell: "+e.demand.time_to_sell));
+    tr.append(item(r), el("td","num",money(p.price_assumed)+" ("+money(p.buy_all_in)+" all-in)"), tdA, tdD, tdV, tdC, el("td","num pos",money(e.net)+" ("+Math.round(e.return*100)+"%)"), el("td","num",money(e.max_price))); return tr;}));
+  if(!L.verified.length){const tr=el("tr"); tr.append(Object.assign(el("td","","Nothing has passed every check yet."),{colSpan:8})); $("luxvbody").append(tr);}
+  $("luxubody").replaceChildren(...L.unverified.map(r=>{const tr=el("tr"), why=el("td"); for(const f of r.failures) why.append(el("div","meta",f.check+": "+f.why));
+    tr.append(item(r), el("td","num",money(r.bid)), el("td","neg",r.failed), why, el("td","meta",r.needs_check||"resolve the failed check")); return tr;}));
+  labelTable("luxvt"); labelTable("luxut");
+}
+function renderFb(){
+  const F=D.fb; const box=$("fbbox"); box.hidden=!F||(!F.verified.length&&!F.unverified.length); $("gofb").style.display=box.hidden?"none":"inline-block";
+  if(box.hidden) return;
+  const B=F.bar;
+  $("fbnote").textContent=`A listing is verified only if it has at least ${B.min_comps} matching SOLD comps (${B.min_recent}+ in the last 90 days), a working unit, and nets at least ${money(B.min_net)} and ${Math.round(B.min_return*100)}% on its asking price after every cost. Asking prices are never used as value. Local cash resale is an assumed ${Math.round(B.local_factor*100)}% of the sold median and `+(B.local_counts?"counts":"is shown for information but does not count")+" toward verification.";
+  const fsel=$("fbfail"); if(!fsel.dataset.set){fsel.dataset.set="1"; for(const c of [...new Set(F.unverified.map(r=>r.failed))].sort()){const o=el("option","",c); o.value=c; fsel.append(o);}
+    for(const id of ["fbq","fbch","fbfail"]) for(const ev of ["input","change"]) $(id).addEventListener(ev,renderFb);}
+  const q=$("fbq").value.toLowerCase(), ch=$("fbch").value, fl=$("fbfail").value;
+  const okq=r=>!q||(r.title+" "+(r.location||"")).toLowerCase().includes(q);
+  const V=F.verified.filter(r=>okq(r)&&(!ch||r.evidence.best_channel===ch)), U=F.unverified.filter(r=>okq(r)&&(!fl||r.failed===fl));
+  $("gofbn").textContent=String(F.verified.length); $("fbcount").textContent=`${V.length} verified, ${U.length} unverified shown`;
+  const item=r=>{const t=el("td","item"); t.append(el("div","title",r.title)); const a=el("a","bid","open on Facebook ↗"); a.href=r.url; a.target="_blank"; a.rel="noopener noreferrer"; t.append(a);
+    t.append(el("div","meta",[r.location,r.distance_miles!=null?r.distance_miles+" mi":"",r.condition_label].filter(Boolean).join(" · "))); return t;};
+  $("fbvbody").replaceChildren(...V.map(r=>{const e=r.evidence, d=e.demand||{}, tr=el("tr");
+    tr.append(item(r), el("td","num",money(r.buy)), el("td","num",money(e.sold_median)+" ("+money(e.sold_low)+"-"+money(e.sold_high)+")"), el("td","num",String(e.comps)),
+      el("td","",`${d.sold_90d} sold in 90 days (~${d.sold_per_month}/mo); about ${d.est_days_to_sell} days to sell (${d.days_basis==="prior"?"category estimate, no active-listing data":d.days_basis})`), el("td","",e.best_channel),
+      el("td","num pos",money(e.net)), el("td","num",Math.round(e.return*100)+"%"), el("td","num",money(e.max_buy)), playCell(r)); return tr;}));
+  if(!V.length) $("fbvbody").append(Object.assign(el("tr"),{})), $("fbvbody").lastChild.append(Object.assign(el("td","","Nothing has passed every check yet."),{colSpan:10}));
+  $("fbubody").replaceChildren(...U.map(r=>{const tr=el("tr"), why=el("td"); for(const f of r.failures) why.append(el("div","meta",f.check+": "+f.why));
+    tr.append(item(r), el("td","num",money(r.buy)), el("td","neg",r.failed), why, el("td","meta",r.needs_check||"fix the failed check, then re-run the import")); return tr;}));
+  labelTable("fbvt"); labelTable("fbut");
+}
 function renderPicks(){
   const P=D.picks||[]; $("picksbox").hidden=!P.length; $("gopicks").style.display=P.length?"inline-block":"none";
   if(!P.length) return;
@@ -989,6 +1093,10 @@ function renderPicks(){
       tr.append(t, el("td","",x.source), el("td","num",money(x.bid)), el("td","num","?"), el("td","num","?"), el("td","num","?"), el("td","num","?"), el("td","num","0"), el("td","num",x.end?(Date.parse(x.end)-Date.now()<=0?"ended":x.end.slice(5,16).replace("T"," ")):""));
       return tr;}
     t.append(el("div","meta","matched on: "+(x.basis||"")));
+    if(x.play){t.append(el("div","meta","condition: "+(x.condition_class||"").replace("_"," ")+"; play: "+x.play));
+      if(x.as_is_value!=null) t.append(el("div","meta","as-is/parts value "+money(x.as_is_value)+" → net "+money(x.as_is_net)));
+      if(x.repaired_value!=null) t.append(el("div","meta","repaired value "+money(x.repaired_value)+" − repair "+money(x.repair_cost)+" (estimate: "+(x.repair_source||"")+") → net "+money(x.repaired_net)+", +"+x.repair_days+" days"));
+      if(x.prob_weighted_value!=null) t.append(el("div","meta","if it works "+money(x.working_value)+"; a 50% chance it works would weight to "+money(x.prob_weighted_value)+" (information only)"));}
     if(x.recent&&x.recent.length){const dt=el("details"); dt.append(el("summary","","recent sold: "+x.recent.map(z=>money(z.total_price)).join(", ")));
       for(const z of x.recent) dt.append(el("div","meta",money(z.total_price)+"  "+(z.date||"")+"  "+z.title)); t.append(dt);}
     const s=(Date.parse(x.end)-Date.now())/1000, d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);
@@ -1030,6 +1138,9 @@ function renderScrap(){
   $("gotx").addEventListener("click",ev=>{ev.preventDefault(); $("plat").value="txauction"; $("minp").checked=false; $("soon").checked=false; $("noest").checked=false; render(); $("t").scrollIntoView();});})();
 render();
 renderWatch();
+renderGate();
+renderLux();
+renderFb();
 renderPicks();
 renderScrap();
 </script></body></html>
@@ -1058,7 +1169,7 @@ def fashion_tier(r: dict) -> str:
     return "everyday"
 
 
-def render(rows: list[dict], refreshed: bool = False, now: datetime | None = None, watch: list[dict] | None = None, scrap: list[dict] | None = None, picks: list[dict] | None = None) -> str:
+def render(rows: list[dict], refreshed: bool = False, now: datetime | None = None, watch: list[dict] | None = None, scrap: list[dict] | None = None, picks: list[dict] | None = None, fb: dict | None = None, lux: dict | None = None, gate: dict | None = None) -> str:
     slim = []
     by_key = {(x.get("source"), str(x.get("lot"))): x for x in (picks or []) if x.get("value")}
     for r in rows:
@@ -1076,14 +1187,18 @@ def render(rows: list[dict], refreshed: bool = False, now: datetime | None = Non
     payload = {"generated": (now or datetime.now(timezone.utc)).isoformat(), "refreshed": refreshed, "tax": catalog.SALES_TAX, "minProfit": MIN_PROFIT, "minRoi": MIN_ROI, "focus": sorted(FOCUS_KINDS), "maxDays": MAX_DAYS_LEFT, "rows": slim,
                "watch": [{**w_, "url": safe_url(w_.get("url") or "")} for w_ in (watch or [])],
                "scrap": [{**a_, "url": safe_url(a_.get("url") or "")} for a_ in (scrap or [])],
-               "picks": [{k_: v_ for k_, v_ in x.items() if k_ != "specs"} | {"url": safe_url(x.get("url") or "")} for x in (picks or [])]}
+               "picks": [{k_: v_ for k_, v_ in x.items() if k_ != "specs"} | {"url": safe_url(x.get("url") or "")} for x in (picks or [])],
+               "gate": ({"bar": gate["bar"], "unverified": [{**g_, "url": safe_url(g_.get("url") or "")} for g_ in gate["unverified"]],
+                        "repair": {k_: [{**g_, "url": safe_url(g_.get("url") or "")} for g_ in gate["repair"][k_]] for k_ in ("verified", "unverified")}} if gate else None),
+               "lux": ({"bar": lux["bar"], **{g_: [{**r_, "url": safe_url(r_.get("url") or "")} for r_ in lux[g_]] for g_ in ("verified", "unverified")}} if lux else None),
+               "fb": ({"bar": fb["bar"], **{g_: [{**r_, "url": safe_url(r_.get("url") or "")} for r_ in fb[g_]] for g_ in ("verified", "unverified")}} if fb else None)}
     return _TEMPLATE.replace("__DATA__", _json_for_html(payload))
 
 
-def write_site(path: str | Path, rows: list[dict], refreshed: bool = False, watch: list[dict] | None = None, scrap: list[dict] | None = None, picks: list[dict] | None = None) -> Path:
+def write_site(path: str | Path, rows: list[dict], refreshed: bool = False, watch: list[dict] | None = None, scrap: list[dict] | None = None, picks: list[dict] | None = None, fb: dict | None = None, lux: dict | None = None, gate: dict | None = None) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render(rows, refreshed, watch=watch, scrap=scrap, picks=picks), encoding="utf-8")
+    path.write_text(render(rows, refreshed, watch=watch, scrap=scrap, picks=picks, fb=fb, lux=lux, gate=gate), encoding="utf-8")
     return path
 
 

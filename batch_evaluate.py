@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 import catalog
 import mcp_auction_pricer as m
+import repair
 import txauction
 from engine.luxury_authenticator import detect_brand_and_tier
 
@@ -46,9 +47,14 @@ LUX_BRANDS = {"louis vuitton", "chanel", "gucci", "hermes", "prada", "dior", "ro
 LUX_EXTRA = re.compile(r"\b(rolex|cartier|van\s+cleef|tiffany)\b", re.I)
 
 
-def classify(title: str, kind: str) -> tuple[str, str] | None:
+PART_LISTING = re.compile(r"lcd|display|assembly|housing|replacement|empty box|box only|motherboard|screen only|keyboard only|\\bcase\\b|cover|charger|"
+                          r"stylus|skin|sleeve|lot of|\\blots?\\b", re.I)  # a listing FOR a part or an accessory, never the whole device
+DAMAGED = ("repairable", "untested_unknown", "parts_only")
+
+
+def classify(title: str, kind: str, allow_damaged: bool = False) -> tuple[str, str] | None:
     """(category, family) if the lot is on the target list, else None (auto-SKIPPED)."""
-    if MID_TIER.search(title) or JUNK.search(title) or LOW_SPEC.search(title):
+    if MID_TIER.search(title) or (JUNK.search(title) and not allow_damaged) or LOW_SPEC.search(title):
         return None
     for name, fam, rx in FAMILIES:
         if rx.search(title):
@@ -73,9 +79,9 @@ def classify(title: str, kind: str) -> tuple[str, str] | None:
     return None
 
 
-def run(db_path: str = "arbitrage.db", snapshot_path: str = "txauction_snapshot.json") -> tuple[list[dict], int, int]:
+def run(db_path: str = "arbitrage.db", snapshot_path: str = "txauction_snapshot.json", now_iso: str | None = None) -> tuple[list[dict], int, int]:
     """(results, lots scanned, lots on the target list). Reads stored data only: no network, no paid quota."""
-    now = datetime.now(timezone.utc).isoformat()
+    now = now_iso or datetime.now(timezone.utc).isoformat()  # now_iso lets an old crawl be re-priced as of its own date
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     rows = conn.execute("select * from catalog where listing_type='auction' and end_time>?", (now,)).fetchall()
@@ -106,7 +112,9 @@ def run(db_path: str = "arbitrage.db", snapshot_path: str = "txauction_snapshot.
                        max_bid_ceiling=mg["max_bid_ceiling"], max_bid_100=mg["max_bid_for_min_profit"], status=mg["recommendation"])
             out.append(rec)
             continue
-        c = classify(L["title"], L["kind"])
+        dmg = repair.classify(L["title"], L["desc"], L["kind"])
+        damaged = dmg["class"] in DAMAGED and not PART_LISTING.search(L["title"])
+        c = classify(L["title"], L["kind"], allow_damaged=damaged)
         if not c:
             continue
         considered += 1
@@ -138,8 +146,31 @@ def run(db_path: str = "arbitrage.db", snapshot_path: str = "txauction_snapshot.
             rec.update(status="SKIPPED (NO STORED COMPS)", basis=basis)
             out.append(rec)
             continue
-        mg = m.calculate_arbitrage_margin(rec["bid"], val, fee, ship, prem, m.CHICAGO_TAX, inbound)
-        rec.update(value=val, basis=basis, profit=mg["net_profit"], roi=mg["roi_pct"], max_bid_ceiling=mg["max_bid_ceiling"],
+        rec.update(condition_class=dmg["class"], working_value=round(val, 2))
+        if dmg["class"] == "cosmetic":
+            val = val * repair.COSMETIC_FACTOR
+            basis += f"; cosmetic wear x {repair.COSMETIC_FACTOR}"
+        if damaged:
+            pv = repair.paths(val, dmg)
+            as_is = m.calculate_arbitrage_margin(rec["bid"], pv["as_is_value"], fee, ship, prem, m.CHICAGO_TAX, inbound)
+            rec.update(as_is_value=round(pv["as_is_value"], 2), as_is_net=as_is["net_profit"], repair_class=dmg["class"], basis=basis + "; " + pv["basis"])
+            chosen = as_is
+            val = pv["as_is_value"]
+            rec["play"] = "as-is (parts value)"
+            if dmg["class"] == "repairable":
+                rep = m.calculate_arbitrage_margin(rec["bid"], pv["repaired_value"], fee, ship, prem, m.CHICAGO_TAX, inbound + dmg["repair_cost"],
+                                                   min_net_profit=m.MIN_NET_PROFIT + repair.REPAIR_CUSHION)
+                rec.update(repaired_value=round(pv["repaired_value"], 2), repaired_net=rep["net_profit"], repair_cost=dmg["repair_cost"],
+                           repair_source=dmg["repair_source"], repair_days=dmg["repair_days"])
+                if rep["net_profit"] > as_is["net_profit"]:
+                    chosen, val, rec["play"] = rep, pv["repaired_value"], "repair"
+            if dmg["class"] == "untested_unknown":
+                rec["prob_weighted_value"] = round(pv["prob_weighted"], 2)
+            mg = chosen
+            rec["category"] = f"{rec['category']} ({rec['play']})"
+        else:
+            mg = m.calculate_arbitrage_margin(rec["bid"], val, fee, ship, prem, m.CHICAGO_TAX, inbound)
+        rec.update(value=val, basis=basis if not damaged else rec["basis"], profit=mg["net_profit"], roi=mg["roi_pct"], max_bid_ceiling=mg["max_bid_ceiling"],
                    max_bid_100=mg["max_bid_for_min_profit"], status=mg["recommendation"])
         if rec.get("comp_source") in ("swappa_free", "spec_matrix", "metal_spot"):
             rec["status"] += f" [PRICED (FREE FALLBACK): {rec['comp_source']}]"
@@ -150,7 +181,7 @@ def run(db_path: str = "arbitrage.db", snapshot_path: str = "txauction_snapshot.
 def main() -> None:
     out, n_lots, considered = run()
     fields = ["source", "lot", "title", "category", "kind", "bid", "bids", "end", "value", "max_bid_ceiling", "max_bid_100", "profit",
-              "roi", "comp_source", "comps", "comp_low", "comp_high", "basis", "status", "specs", "url"]
+              "roi", "condition_class", "play", "working_value", "as_is_value", "as_is_net", "repaired_value", "repaired_net", "repair_cost", "repair_days", "repair_source", "comp_source", "comps", "comp_low", "comp_high", "basis", "status", "specs", "url"]
     with open("batch_pricing_report.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fields, extrasaction="ignore")
         w.writeheader()
