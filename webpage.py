@@ -780,7 +780,7 @@ details.more{width:100%}details.more>summary{cursor:pointer;color:var(--ink);fon
 <h2 style="font-size:1.05rem;margin:0 0 4px">Other auction sources: Treasury (CWS), HiBid, Illinois iBid, CTBids (buyer's premium read per sale)</h2>
 <p class="sub" style="margin:0 0 10px" id="extnote"></p>
 <h3 style="font-size:.95rem;margin:6px 0 4px">Where each buy source's data comes from</h3>
-<table id="extst"><thead><tr><th>Source</th><th>Status</th><th>How it is fetched / what blocks automation</th></tr></thead><tbody id="extsbody"></tbody></table>
+<table id="extst"><thead><tr><th>Source</th><th>Status</th><th>Claude (catalog run)</th><th>Muse (browser / connected accounts)</th></tr></thead><tbody id="extsbody"></tbody></table>
 <h3 style="font-size:.95rem;margin:14px 0 4px">Verified</h3>
 <table id="extvt"><thead><tr><th>Item</th><th>Source and sale terms</th><th>Expected price (all-in)</th><th>Value basis</th><th>Net</th><th>Max bid</th></tr></thead><tbody id="extvbody"></tbody></table>
 <h3 style="font-size:.95rem;margin:18px 0 4px">Unverified</h3>
@@ -1028,12 +1028,14 @@ function renderExt(){
   const X=D.ext; const box=$("extbox"); box.hidden=!X; $("goext").style.display=box.hidden?"none":"inline-block";
   if(box.hidden) return; $("goextn").textContent=String(X.verified.length);
   $("extnote").textContent=`Each sale's buyer's premium and tax are read from that sale's own terms (premium varies per sale; a lot whose sale states none cannot be costed). Same gate as everywhere else: high identity, spec-matched sold comps, the ${money(X.bar.min_net)} / ${Math.round(X.bar.min_return*100)}% bar. Pickup-only lots beyond ${X.bar.max_pickup_miles} miles fail the Chicago-metro rule. Jewelry with karat and gram weights is valued by melt.`;
-  $("extsbody").replaceChildren(...(X.sources||[]).map(s=>{const tr=el("tr"), st=el("td",s.status==="AUTOMATED"?"pos":s.status==="MANUAL-ONLY"?"neg":"",s.status); const d=el("td","meta");
-    d.append(el("div","",s.status==="MANUAL-ONLY"?"NOT AUTOMATED: "+s.blocker:(s.how||""))); if(s.status==="AUTOMATED") d.append(el("div","",(s.lots||0)+" lot(s) stored; last fetched "+(s.last_fetched?new Date(s.last_fetched).toLocaleString():"never")));
-    tr.append(el("td","",s.label), st, d); return tr;}));
+  $("extsbody").replaceChildren(...(X.sources||[]).map(s=>{const tr=el("tr"), es=s.effective_status, st=el("td",es==="AUTOMATED"?"pos":(es==="MANUAL-ONLY"?"neg":"warn"),es);
+    const c=el("td","meta"), cl=s.claude_attempt||{}; c.append(el("div","",cl.result==="ok"?("automated: "+(s.how||"")):(cl.result==="by design"?(s.how||""):("blocked: "+(cl.blocker_type||"")+". "+(cl.blocker||"")))));
+    if(s.lots) c.append(el("div","",s.lots+" lot(s) stored; last "+(s.last_fetched?new Date(s.last_fetched).toLocaleString():"never")));
+    const m=el("td","meta"), ma=s.muse_attempt||{}; m.append(el("div","",ma.result==="pending"?"not tested yet":("Muse "+ma.result+(ma.note?": "+ma.note:"")+(ma.at?" ("+ma.at.slice(0,10)+")":""))));
+    tr.append(el("td","",s.label), st, c, m); return tr;}));
   labelTable("extst");
   const terms=r=>{const t=r.evidence.terms||{}, d=el("div","meta"); d.append(el("div","",r.platform_label+(r.sale_id?" sale "+r.sale_id:""))); d.append(el("div","","premium "+(t.premium==null?"NOT READ":Math.round(t.premium*1000)/10+"%")+" ("+(t.premium_source||"")+"); tax "+Math.round((t.tax||0)*10000)/100+"%"));
-    if(r.manual_only) d.append(el("div","neg","MANUAL-ONLY source: this lot was supplied by file, it is not fetched automatically"));
+    if(r.supply==="muse_file") d.append(el("div",r.manual_only?"neg":"meta",(r.manual_only?"MANUAL-ONLY source: ":"")+"this lot was supplied by file (Muse), not fetched by Claude's catalog run ["+(r.source_status||"")+"]"));
     d.append(el("div","",t.pickup_only?("pickup only"+(t.distance_miles!=null?", "+t.distance_miles+" mi":", distance unknown")):"buyer-arranged shipping")); return d;};
   const item=r=>{const t=el("td","item"); t.append(el("div","title",r.title)); if(r.url){const a=el("a","bid","open listing ↗"); a.href=r.url; a.target="_blank"; a.rel="noopener noreferrer"; t.append(a);} return t;};
   $("extvbody").replaceChildren(...X.verified.map(r=>{const e=r.evidence, tr=el("tr"), tdT=el("td"); tdT.append(terms(r));

@@ -594,6 +594,7 @@ async def amain() -> None:
     ap.add_argument("--sync-txauction", action="store_true", help="re-read the TXAuction auction pages listed in txauction.py (about 4 requests)")
     ap.add_argument("--import-facebook", metavar="FILE", help="load a Facebook Marketplace export (JSON or CSV) and print the confidence-gate result for every listing; no network, no paid quota")
     ap.add_argument("--sync-ibid", action="store_true", help="read Illinois iBid (state surplus + unclaimed-property lots): about 10 listing pages plus detail pages for jewelry/tech lots, 2 s apart; no account, no spend")
+    ap.add_argument("--record-attempt", nargs="+", metavar=("SOURCE", "WHO"), help="record a scraper's attempt at a buy source: SOURCE WHO(claude|muse) RESULT(ok|failed) [NOTE...]")
     ap.add_argument("--import-lots", metavar="FILE", help="load an auction-sources export (CWS/Treasury, HiBid, Illinois iBid, CTBids, discovery leads) with per-sale buyer's premium; no network")
     ap.add_argument("--serve", action="store_true", help="serve the page at http://127.0.0.1:PORT (this machine only)")
     ap.add_argument("--port", type=int, default=8765)
@@ -789,6 +790,15 @@ async def amain() -> None:
         for r in pay["unverified"][:12]:
             if r["source"] == "illinois_ibid":
                 print(f"  [{r['failed']}] {r['title'][:60]}")
+        return
+    if args.record_attempt:
+        import lot_sources
+        src, who, result, *note = args.record_attempt + [""] * (3 - len(args.record_attempt))
+        conn = db.connect(cfg.db_path)
+        lot_sources.record_attempt(conn, src, who, result == "ok", " ".join(note))
+        for r in lot_sources.source_status(conn):
+            if r["source"] == src:
+                print(f"{r['label']}: {r['effective_status']} (Muse attempt: {r['muse_attempt']['result']})")
         return
     if args.import_lots:
         import lot_sources

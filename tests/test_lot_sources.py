@@ -163,13 +163,34 @@ def test_an_automated_source_shows_what_the_last_crawl_stored(conn, tmp_path):
     assert row["lots"] == 1 and row["last_fetched"]
 
 
-def test_lots_supplied_by_file_from_a_manual_only_source_are_labelled_manual(conn, tmp_path):
+def test_blocked_sources_wait_for_muses_independent_attempt_and_the_status_follows_it(conn, tmp_path):
+    st = lambda: {s["source"]: s for s in ls.source_status(conn)}
+    assert st()["hibid"]["effective_status"] == ls.BLOCKED_PENDING and st()["hibid"]["muse_attempt"]["result"] == "pending"
+    assert st()["illinois_ibid"]["effective_status"] == ls.AUTOMATED and st()["facebook_marketplace"]["effective_status"] == ls.COVERED_BY_MUSE
+    ls.record_attempt(conn, "hibid", "muse", True, "catalog readable in Muse's browser; exported 40 lots")
+    assert st()["hibid"]["effective_status"] == ls.COVERED_BY_MUSE and "40 lots" in st()["hibid"]["muse_attempt"]["note"]
+    ls.record_attempt(conn, "cws_treasury", "muse", False, "needs the $2,500 authorization just to view")
+    assert st()["cws_treasury"]["effective_status"] == ls.MANUAL_ONLY                      # both attempts failed: manual-only stands, both on record
+    assert st()["cws_treasury"]["claude_attempt"]["blocker_type"].startswith("bot block") and "$2,500" in st()["cws_treasury"]["muse_attempt"]["note"]
+    ls.record_attempt(conn, "cws_treasury", "muse", True, "reached it after all")           # the latest attempt wins
+    assert st()["cws_treasury"]["effective_status"] == ls.COVERED_BY_MUSE
+    with pytest.raises(ValueError):
+        ls.record_attempt(conn, "nowhere", "muse", True)
+
+
+def test_lots_from_blocked_sources_are_labelled_by_who_supplied_them(conn, tmp_path):
     load(conn, tmp_path, [sale(source="hibid", sale_id="H", premium="15%", lots=[lot()])])
     r = run(conn, None)
-    assert r["manual_only"] is True
+    assert r["supply"] == "muse_file" and r["manual_only"] is False and r["source_status"] == ls.BLOCKED_PENDING
+    ls.record_attempt(conn, "hibid", "muse", False, "also blocked")
+    r2 = run(conn, None)
+    assert r2["manual_only"] is True and r2["source_status"] == ls.MANUAL_ONLY
+    load(conn, tmp_path, [sale(source="illinois_ibid", sale_id="IL", premium="2%", lots=[lot(lot_id="9")])])
+    claude = [ls.assess_lot(conn, l, s, NOW) for l, s in ls.lot_rows(conn, NOW) if s["source"] == "illinois_ibid"][0]
+    assert claude["supply"] == "claude" and claude["manual_only"] is False
     import webpage
     html = webpage.render([], ext=ls.page_payload(conn, NOW))
-    assert "NOT AUTOMATED" in html and "Where each buy source" in html and "MANUAL-ONLY source: this lot" in html
+    assert "supplied by file (Muse)" in html and "Muse (browser / connected accounts)" in html and "blocker_type" in html
 
 
 def test_page_shows_the_source_table_even_with_no_lots(conn):

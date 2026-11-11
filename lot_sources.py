@@ -50,16 +50,19 @@ CHECKED = "2026-11-11"
 SOURCE_STATUS = {
     "illinois_ibid": {"label": "Illinois iBid", "status": AUTOMATED, "how": "fetched with the normal catalog run: main.py --catalog (domain illinois_ibid), clients/illinois_ibid.py", "blocker": None},
     "facebook_marketplace": {"label": "Facebook Marketplace", "status": INTAKE, "how": "Muse reads Marketplace through Andrew's connected account and supplies JSON; fb_market.py's importer is the integration point", "blocker": None},
-    "cws_treasury": {"label": "CWS Marketing (Treasury TEOAF)", "status": MANUAL_ONLY,
+    "cws_treasury": {"blocker_type": "bot block (CloudFront WAF 403); login/account requirement unconfirmed", "label": "CWS Marketing (Treasury TEOAF)", "status": MANUAL_ONLY,
                      "blocker": f"CloudFront answers 403 'Request blocked' to automated requests on every page: the home page, /auctions, and the auction-info, catalog and lot-details URLs listed in its own public sitemap (checked {CHECKED}; the sitemap itself loads). "
                                 "Whether the catalog can be viewed in a browser without the $2,500 authorization is unconfirmed from here. Andrew decides about registering; nothing was registered."},
-    "hibid": {"label": "HiBid", "status": MANUAL_ONLY, "blocker": f"Cloudflare blocks automated requests: 'Sorry, you have been blocked' (403) on hibid.com, its robots.txt and /graphql (checked {CHECKED})"},
-    "ctbids": {"label": "CTBids (Caring Transitions)", "status": MANUAL_ONLY,
+    "hibid": {"blocker_type": "bot block (Cloudflare challenge/403)", "label": "HiBid", "status": MANUAL_ONLY, "blocker": f"Cloudflare blocks automated requests: 'Sorry, you have been blocked' (403) on hibid.com, its robots.txt and /graphql (checked {CHECKED})"},
+    "ctbids": {"blocker_type": "JS rendering (private API only)", "label": "CTBids (Caring Transitions)", "status": MANUAL_ONLY,
                "blocker": "ctbids.com is a JavaScript app whose pages contain no lot data; the lots come only from its private, undocumented API, which was not used here (not a published interface; its terms were not reviewed)"},
-    "estatesales": {"label": "EstateSales.net", "status": MANUAL_ONLY, "blocker": f"its Terms of Service forbid collecting content with robots or spiders without written permission (read {CHECKED})"},
-    "auctionzip": {"label": "AuctionZip", "status": MANUAL_ONLY, "blocker": f"403 to automated requests, including robots.txt-allowed pages (checked {CHECKED})"},
-    "whatnot": {"label": "Whatnot", "status": MANUAL_ONLY, "blocker": "live selling: auctions run in real time inside the app, so there is no catalog to crawl"},
+    "estatesales": {"blocker_type": "robots/ToS (Terms of Service forbid automated collection, including browser agents)", "label": "EstateSales.net", "status": MANUAL_ONLY, "blocker": f"its Terms of Service forbid collecting content with robots or spiders without written permission (read {CHECKED})"},
+    "auctionzip": {"blocker_type": "bot block (403)", "label": "AuctionZip", "status": MANUAL_ONLY, "blocker": f"403 to automated requests, including robots.txt-allowed pages (checked {CHECKED})"},
+    "whatnot": {"blocker_type": "live/manual by nature", "label": "Whatnot", "status": MANUAL_ONLY, "blocker": "live selling: auctions run in real time inside the app, so there is no catalog to crawl"},
 }
+
+ATTEMPT_SCHEMA = """CREATE TABLE IF NOT EXISTS source_attempts (source TEXT NOT NULL, who TEXT NOT NULL, ok INTEGER NOT NULL, note TEXT, at INTEGER NOT NULL)"""
+COVERED_BY_MUSE, BLOCKED_PENDING = "COVERED-BY-MUSE", "BLOCKED FOR CLAUDE: MUSE TEST PENDING"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS auction_sales (
@@ -82,6 +85,7 @@ LOT_ALIASES = {"id": "lot_id", "lot": "lot_id", "lot_number": "lot_id", "name": 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    conn.execute(ATTEMPT_SCHEMA)
     have = {r[1] for r in conn.execute("PRAGMA table_info(discovery_leads)")}
     for col in ("address", "company", "photos_url"):  # discovery leads carry where, who and a photos link (added after the first version)
         if col not in have:
@@ -221,7 +225,8 @@ def assess_lot(conn: sqlite3.Connection, lot: sqlite3.Row, sale: sqlite3.Row, no
     profile = PROFILES[lot["source"]]
     t = sale_terms(profile, sale)
     title, desc = lot["title"], lot["description"] or ""
-    res = {"manual_only": SOURCE_STATUS.get(lot["source"], {}).get("status") == MANUAL_ONLY, "platform": lot["source"], "platform_label": profile["label"], "listing_id": f"{lot['sale_id']}-{lot['lot_id']}", "url": lot["url"] or sale["url"], "title": title,
+    eff = effective_status(lot["source"], _latest(conn, lot["source"], "muse"))
+    res = {"manual_only": eff == MANUAL_ONLY, "supply": "claude" if eff == AUTOMATED else "muse_file", "source_status": eff, "platform": lot["source"], "platform_label": profile["label"], "listing_id": f"{lot['sale_id']}-{lot['lot_id']}", "url": lot["url"] or sale["url"], "title": title,
            "end": lot["ends"] or sale["ends"], "bid": lot["current_bid"] or 0.0, "failures": [], "evidence": {"terms": t}, "status": "unverified", "failed": None, "needs_check": None,
            "claimed": None, "source": lot["source"], "sale_id": lot["sale_id"], "pickup_only": t["pickup_only"], "distance_miles": t["distance_miles"]}
     fails = res["failures"]
@@ -325,16 +330,44 @@ def _finish(res: dict) -> dict:
     return res
 
 
+def record_attempt(conn: sqlite3.Connection, source: str, who: str, ok: bool, note: str = "") -> None:
+    """Record one scraper's independent attempt at a source ('claude' or 'muse'). The latest attempt per scraper decides the status."""
+    if source not in SOURCE_STATUS or who not in ("claude", "muse"):
+        raise ValueError(f"unknown source '{source}' or scraper '{who}'")
+    ensure_schema(conn)
+    conn.execute("INSERT INTO source_attempts VALUES (?,?,?,?,?)", (source, who, 1 if ok else 0, note, int(time.time())))
+    conn.commit()
+
+
+def _latest(conn: sqlite3.Connection, source: str, who: str):
+    r = conn.execute("SELECT ok, note, at FROM source_attempts WHERE source=? AND who=? ORDER BY at DESC, rowid DESC LIMIT 1", (source, who)).fetchone()
+    return {"result": "ok" if r[0] else "failed", "note": r[1], "at": datetime.fromtimestamp(r[2], timezone.utc).isoformat()} if r else {"result": "pending", "note": None, "at": None}
+
+
+def effective_status(source: str, muse: dict) -> str:
+    """AUTOMATED (Claude's catalog run) | COVERED-BY-MUSE (Muse feeds files) | MANUAL-ONLY (both attempts failed) | BLOCKED FOR CLAUDE: MUSE TEST PENDING."""
+    base = SOURCE_STATUS[source]["status"]
+    if base == AUTOMATED:
+        return AUTOMATED
+    if base == INTAKE or muse["result"] == "ok":
+        return COVERED_BY_MUSE
+    return MANUAL_ONLY if muse["result"] == "failed" else BLOCKED_PENDING
+
+
 def source_status(conn: sqlite3.Connection) -> list[dict]:
-    """Every buy source with its status. AUTOMATED sources show what the last crawl stored; MANUAL-ONLY sources say exactly what blocks automation."""
+    """Every buy source with its effective status and BOTH scrapers' attempts. Claude automates what it can inside the catalog run; Muse (browser and connected
+    accounts) feeds files for blocked sources through this module's import schema. MANUAL-ONLY only stands when both attempts failed."""
     ensure_schema(conn)
     out = []
     for key, v in SOURCE_STATUS.items():
-        row = {"source": key, **v, "lots": None, "last_fetched": None}
-        if v["status"] == AUTOMATED:
-            r = conn.execute("SELECT COUNT(*), MAX(imported_at) FROM auction_lots WHERE source=?", (key,)).fetchone()
-            row["lots"] = r[0]
-            row["last_fetched"] = datetime.fromtimestamp(r[1], timezone.utc).isoformat() if r[1] else None
+        muse = _latest(conn, key, "muse")
+        row = {"source": key, **v, "lots": None, "last_fetched": None, "muse_attempt": muse,
+               "claude_attempt": {"result": "ok" if v["status"] == AUTOMATED else ("by design" if v["status"] == INTAKE else "blocked"), "blocker_type": v.get("blocker_type"),
+                                  "blocker": v.get("blocker"), "checked": CHECKED},
+               "effective_status": effective_status(key, muse)}
+        r = conn.execute("SELECT COUNT(*), MAX(imported_at) FROM auction_lots WHERE source=?", (key,)).fetchone()
+        row["lots"] = r[0]
+        row["last_fetched"] = datetime.fromtimestamp(r[1], timezone.utc).isoformat() if r[1] else None
         out.append(row)
     return out
 
