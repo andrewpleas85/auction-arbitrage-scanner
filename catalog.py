@@ -478,6 +478,22 @@ def fees_for(e: dict, sale: float) -> tuple[float, float]:
     return e["fee"], e.get("order_fee", 0.30)
 
 
+SOURCE_PREMIUM = {"propertyroom": 0.15, "gsa": 0.0, "municibid": 0.09, "publicsurplus": 0.105, "govdeals": 0.10}  # per-SOURCE guesses/typical values
+
+
+def listing_premium(r) -> float:
+    """Buyer's premium for ONE listing: the value read from its own sale terms (catalog.buyer_premium) when present, else the per-source constant."""
+    keys = r.keys() if hasattr(r, "keys") else r
+    own = r["buyer_premium"] if "buyer_premium" in keys else None
+    return float(own) if own is not None else SOURCE_PREMIUM.get(r["platform"], 0.0)
+
+
+def set_listing_premium(conn: sqlite3.Connection, platform: str, listing_id: str, pct: float, source: str) -> None:
+    """Record a premium read from this listing's own terms (pct as a fraction, 0.15 = 15%). It overrides the per-source constant in economics()."""
+    conn.execute("UPDATE catalog SET buyer_premium=?, premium_source=? WHERE platform=? AND listing_id=?", (pct, source, platform, str(listing_id)))
+    conn.commit()
+
+
 def economics(r, outbound: float = 15.0) -> dict:
     """Per-listing selling/buying assumptions: buyer premium, inbound shipping, resale fee rate, outbound shipping."""
     heavy = r["kind"] in HEAVY
@@ -486,7 +502,7 @@ def economics(r, outbound: float = 15.0) -> dict:
         inbound = 0.0  # a stored 0.0 is FREE shipping; unknown (calculated) shipping is stored as NULL and gets the default below
     else:
         inbound = None
-    return {"prem": {"propertyroom": 0.15, "gsa": 0.0, "municibid": 0.09, "publicsurplus": 0.105, "govdeals": 0.10}.get(r["platform"], 0.0),
+    return {"prem": listing_premium(r),
             "inbound": inbound if inbound is not None else shipping if (shipping or 0) > 0 else (TABLET_SHIPPING if r["kind"] == "tablet" else 15.0 if r["platform"] == "propertyroom"
                                                     else 20.0 if heavy else 10.0), "tax": SALES_TAX,
             **ebay_fee_terms(r), "returns": RETURN_RESERVE, "ship_out": outbound * (2 if heavy else 1),

@@ -66,6 +66,10 @@ LOT_ALIASES = {"id": "lot_id", "lot": "lot_id", "lot_number": "lot_id", "name": 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    have = {r[1] for r in conn.execute("PRAGMA table_info(discovery_leads)")}
+    for col in ("address", "company", "photos_url"):  # discovery leads carry where, who and a photos link (added after the first version)
+        if col not in have:
+            conn.execute(f"ALTER TABLE discovery_leads ADD COLUMN {col} TEXT")
     conn.commit()
 
 
@@ -106,10 +110,14 @@ def read_file(path: str | Path) -> dict:
 
 def import_file(conn: sqlite3.Connection, path: str | Path) -> dict:
     """Load sale terms + lots (+ discovery leads). Returns counts and rejected rows with reasons. The premium is stored on the SALE row."""
+    return import_data(conn, read_file(path))
+
+
+def import_data(conn: sqlite3.Connection, data: dict) -> dict:
+    """The same load as import_file, from already-parsed data (the crawlers hand their results straight in)."""
     ensure_schema(conn)
     now = int(time.time())
     res = {"sales": 0, "lots": 0, "leads": 0, "rejected": []}
-    data = read_file(path)
     for si, raw in enumerate(data.get("sales", []), 1):
         sale = _norm({k: v for k, v in raw.items() if k != "lots"}, SALE_ALIASES)
         src, sid = str(sale.get("source") or "").strip().lower(), str(sale.get("sale_id") or "").strip()
@@ -133,13 +141,15 @@ def import_file(conn: sqlite3.Connection, path: str | Path) -> dict:
                           parse_rate_num(lot.get("weight_g")), int(parse_rate_num(lot.get("karat"))) if parse_rate_num(lot.get("karat")) else None, now))
             res["lots"] += 1
     for li, raw in enumerate(data.get("leads", []), 1):
-        lead = _norm(raw, {"id": "lead_id", "name": "title", "link": "url"})
+        lead = _norm(raw, {"id": "lead_id", "name": "title", "link": "url", "photos": "photos_url", "photo_url": "photos_url", "photos_link": "photos_url",
+                           "organizer": "company", "company_name": "company", "date": "dates", "when": "dates"})
         src = str(lead.get("source") or "").strip().lower()
         if src not in PROFILES or str(lead.get("lead_id") or "").strip() == "":
             res["rejected"].append((f"lead {li}", "unknown source or no lead_id"))
             continue
-        conn.execute("INSERT OR REPLACE INTO discovery_leads VALUES (?,?,?,?,?,?,?,?,?)",
-                     (src, str(lead["lead_id"]), lead.get("title"), lead.get("url"), lead.get("location"), parse_rate_num(lead.get("distance_miles")), lead.get("dates"), lead.get("notes"), now))
+        conn.execute("INSERT OR REPLACE INTO discovery_leads (source, lead_id, title, url, location, distance_miles, dates, notes, imported_at, address, company, photos_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                     (src, str(lead["lead_id"]), lead.get("title"), lead.get("url"), lead.get("location"), parse_rate_num(lead.get("distance_miles")), lead.get("dates"), lead.get("notes"), now,
+                      lead.get("address"), lead.get("company"), lead.get("photos_url")))
         res["leads"] += 1
     conn.commit()
     return res

@@ -133,6 +133,9 @@ def connect(path: str) -> sqlite3.Connection:
         conn.execute("ALTER TABLE catalog ADD COLUMN location TEXT")  # where the lot is (pickup-only sites)
     if "description" not in have_cat:
         conn.execute("ALTER TABLE catalog ADD COLUMN description TEXT")  # lot details (units, models) for surplus lots
+    for col, typ in (("buyer_premium", "REAL"), ("premium_source", "TEXT")):  # the premium READ from this listing's own sale terms; it overrides any per-source constant
+        if col not in have_cat:
+            conn.execute(f"ALTER TABLE catalog ADD COLUMN {col} {typ}")
     if not conn.execute("SELECT 1 FROM sold_sales LIMIT 1").fetchone():  # keep what the 24h cache already holds
         import json
         for prov, q, ts, payload in conn.execute("SELECT provider, query, fetched_at, payload FROM comp_cache").fetchall():

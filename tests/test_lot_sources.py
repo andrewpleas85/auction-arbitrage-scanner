@@ -135,3 +135,13 @@ def test_sample_fixture_loads_and_is_costed_per_sale(conn):
     assert res == {"sales": 2, "lots": 2, "leads": 1, "rejected": []}
     terms = {s["sale_id"]: ls.sale_terms(ls.PROFILES[s["source"]], s) for _, s in ls.lot_rows(conn, datetime(2026, 11, 11, tzinfo=timezone.utc))}
     assert terms["H-1001"]["premium"] == 0.15 and terms["H-1001"]["tax"] == 0.1025 and terms["T-77"]["premium"] == 0.0 and terms["T-77"]["tax"] == 0.0
+
+
+def test_discovery_leads_carry_address_company_and_a_photos_link_and_are_never_priced(conn, tmp_path):
+    load(conn, tmp_path, [], leads=[{"source": "estatesales", "lead_id": "NAP-1", "title": "Naperville estate sale", "address": "123 Main St, Naperville, IL 60540", "company": "Acme Estate Sales",
+                                     "photos": "https://www.estatesales.net/IL/Naperville/60540/1", "dates": "2026-11-14 to 2026-11-16", "distance_miles": 30, "notes": "jewelry, designer bags"}])
+    lead = ls.leads(conn)[0]
+    assert lead["address"].startswith("123 Main") and lead["company"] == "Acme Estate Sales" and lead["photos_url"].endswith("/1") and lead["priced"] is False
+    import webpage
+    html = webpage.render([], ext=ls.page_payload(conn, NOW))
+    assert "Naperville estate sale" in html and "Acme Estate Sales" in html and "<th>Photos</th>" in html

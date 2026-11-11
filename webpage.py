@@ -783,7 +783,7 @@ details.more{width:100%}details.more>summary{cursor:pointer;color:var(--ink);fon
 <h3 style="font-size:.95rem;margin:18px 0 4px">Unverified</h3>
 <table id="extut"><thead><tr><th>Item</th><th>Source and sale terms</th><th>Bid</th><th>Failed check</th><th>Why</th></tr></thead><tbody id="extubody"></tbody></table>
 <h3 style="font-size:.95rem;margin:18px 0 4px">Estate sale leads (discovery only: not priced)</h3>
-<table id="extlt"><thead><tr><th>Lead</th><th>Source</th><th>Where</th><th>When</th><th>Notes</th></tr></thead><tbody id="extlbody"></tbody></table>
+<table id="extlt"><thead><tr><th>Lead</th><th>Source</th><th>Where</th><th>When</th><th>Company</th><th>Photos</th><th>Notes</th></tr></thead><tbody id="extlbody"></tbody></table>
 </div>
 <div class="wrap" id="repbox" style="margin-top:28px" hidden>
 <h2 style="font-size:1.05rem;margin:0 0 4px">Repair plays: auction lots that state a repairable defect</h2>
@@ -1033,7 +1033,8 @@ function renderExt(){
   $("extubody").replaceChildren(...X.unverified.map(r=>{const tr=el("tr"), tdT=el("td"), why=el("td"); tdT.append(terms(r)); for(const f of r.failures) why.append(el("div","meta",f.check+": "+f.why));
     tr.append(item(r), tdT, el("td","num",money(r.bid)), el("td","neg",r.failed), why); return tr;}));
   $("extlbody").replaceChildren(...X.leads.map(l=>{const tr=el("tr"), t=el("td","item"); t.append(el("div","title",l.title||l.lead_id)); if(l.url){const a=el("a","bid","open ↗"); a.href=l.url; a.target="_blank"; a.rel="noopener noreferrer"; t.append(a);}
-    tr.append(t, el("td","",l.label), el("td","",[l.location,l.distance_miles!=null?l.distance_miles+" mi":""].filter(Boolean).join(" · ")), el("td","",l.dates||""), el("td","meta",l.notes||"")); return tr;}));
+    const ph=el("td"); if(l.photos_url){const a=el("a","bid","photos ↗"); a.href=l.photos_url; a.target="_blank"; a.rel="noopener noreferrer"; ph.append(a);}
+    tr.append(t, el("td","",l.label), el("td","",[l.address||l.location,l.distance_miles!=null?l.distance_miles+" mi":""].filter(Boolean).join(" · ")), el("td","",l.dates||""), el("td","",l.company||""), ph, el("td","meta",l.notes||"")); return tr;}));
   labelTable("extvt"); labelTable("extut"); labelTable("extlt");
 }
 function renderGate(){

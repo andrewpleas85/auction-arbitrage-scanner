@@ -593,6 +593,7 @@ async def amain() -> None:
     ap.add_argument("--web-all", action="store_true", help="put EVERY profitable item on the page, sortable as a whole (refresh takes longer)")
     ap.add_argument("--sync-txauction", action="store_true", help="re-read the TXAuction auction pages listed in txauction.py (about 4 requests)")
     ap.add_argument("--import-facebook", metavar="FILE", help="load a Facebook Marketplace export (JSON or CSV) and print the confidence-gate result for every listing; no network, no paid quota")
+    ap.add_argument("--sync-ibid", action="store_true", help="read Illinois iBid (state surplus + unclaimed-property lots): about 10 listing pages plus detail pages for jewelry/tech lots, 2 s apart; no account, no spend")
     ap.add_argument("--import-lots", metavar="FILE", help="load an auction-sources export (CWS/Treasury, HiBid, Illinois iBid, CTBids, discovery leads) with per-sale buyer's premium; no network")
     ap.add_argument("--serve", action="store_true", help="serve the page at http://127.0.0.1:PORT (this machine only)")
     ap.add_argument("--port", type=int, default=8765)
@@ -774,6 +775,20 @@ async def amain() -> None:
             extra = f"  ${r['low']:,.0f}-${r['high']:,.0f} typ ${r['typical']:,.0f} from {r['n']} sales" if r["status"] == "stored" else ""
             print(f"{r['status']:<34} {r['listings']:>3} listings  {r['name'][:34]:<34}{extra}")
         print(f"{len(res)} groups" + (" (dry run, nothing spent)" if args.dry_run_ranges else ""))
+        return
+    if args.sync_ibid:
+        import lot_sources
+        from clients import illinois_ibid
+        conn = db.connect(cfg.db_path)
+        async def _ibid():
+            async with httpx.AsyncClient(timeout=40) as http:
+                return await illinois_ibid.sync(conn, http)
+        print(await _ibid())
+        pay = lot_sources.page_payload(conn)
+        print(f"{len(pay['verified'])} verified, {len(pay['unverified'])} unverified lot(s) across the intake sources")
+        for r in pay["unverified"][:12]:
+            if r["source"] == "illinois_ibid":
+                print(f"  [{r['failed']}] {r['title'][:60]}")
         return
     if args.import_lots:
         import lot_sources
