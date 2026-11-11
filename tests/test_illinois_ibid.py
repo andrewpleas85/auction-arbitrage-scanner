@@ -114,3 +114,40 @@ def test_the_html_title_tag_is_ignored_and_a_leading_dash_in_the_title_is_stripp
             "Auction Ends In: 2 days (Nov 13, 2026 - 05:09 PM) # of bids: 4 Current Bid: $ 520.00 Shipping Fee: $ 0.00 Item Description 5 TESTED iPhones 13 64 GB Guidelines x</body></html>")
     it = ib.parse_item(page)
     assert it["title"] == "5 TESTED iPhones 13 64 GB" and it["lot"] == "20713" and it["current_bid"] == 520.0 and it["bids"] == 4 and it["ends"] == "2026-11-13T23:09:00+00:00"
+
+
+def test_illinois_ibid_is_part_of_the_normal_catalog_run(tmp_path):
+    import catalog
+    from config import Config
+    assert "illinois_ibid" in catalog.ALL_DOMAINS                      # --catalog with no domain list includes it
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        path = req.url.path + ("?" + req.url.query.decode() if req.url.query else "")
+        if path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nDisallow: /admin/\n")
+        if path == "/fees.php":
+            return httpx.Response(200, text=fx("ibid_fees.html"))
+        if path.startswith("/contents.php"):
+            return httpx.Response(200, text=fx("ibid_terms_clause.html"))
+        if path == "/browse.php?id=561":
+            return httpx.Response(200, text=fx("ibid_browse_misc.html"))
+        if path.startswith("/browse.php"):
+            return httpx.Response(200, text="<html>No items found</html>")
+        if path.startswith("/item.php"):
+            return httpx.Response(200, text=jewelry_item_page())
+        return httpx.Response(404)
+
+    async def go():
+        conn = db.connect(str(tmp_path / "t.db"))
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+            orig = ib.sync.__defaults__
+            ib.sync.__defaults__ = (orig[0], 0.0, orig[2], orig[3])          # no pause under test
+            try:
+                stats = await catalog.crawl(conn, http, Config(), domains=["illinois_ibid"])
+            finally:
+                ib.sync.__defaults__ = orig
+        return stats, conn
+
+    stats, conn = asyncio.run(go())
+    assert stats["illinois_ibid"] == 5 and stats["illinois_ibid_scanned"] == 5 and "illinois_ibid_error" not in stats
+    assert conn.execute("SELECT COUNT(*) FROM auction_lots WHERE source='illinois_ibid'").fetchone()[0] == 5

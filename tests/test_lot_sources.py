@@ -145,3 +145,34 @@ def test_discovery_leads_carry_address_company_and_a_photos_link_and_are_never_p
     import webpage
     html = webpage.render([], ext=ls.page_payload(conn, NOW))
     assert "Naperville estate sale" in html and "Acme Estate Sales" in html and "<th>Photos</th>" in html
+
+
+def test_every_source_has_a_status_and_manual_only_sources_say_what_blocks_automation(conn):
+    st = {s["source"]: s for s in ls.source_status(conn)}
+    assert st["illinois_ibid"]["status"] == ls.AUTOMATED and st["illinois_ibid"]["lots"] == 0
+    assert st["facebook_marketplace"]["status"] == ls.INTAKE
+    for key in ("cws_treasury", "hibid", "ctbids", "estatesales", "auctionzip", "whatnot"):
+        assert st[key]["status"] == ls.MANUAL_ONLY and len(st[key]["blocker"]) > 40
+    assert "403" in st["hibid"]["blocker"] and "403" in st["cws_treasury"]["blocker"] and "$2,500" in st["cws_treasury"]["blocker"]
+    assert "Terms of Service" in st["estatesales"]["blocker"] and "live" in st["whatnot"]["blocker"]
+
+
+def test_an_automated_source_shows_what_the_last_crawl_stored(conn, tmp_path):
+    load(conn, tmp_path, [sale(source="illinois_ibid", sale_id="IL", premium="2%", lots=[lot()])])
+    row = [s for s in ls.source_status(conn) if s["source"] == "illinois_ibid"][0]
+    assert row["lots"] == 1 and row["last_fetched"]
+
+
+def test_lots_supplied_by_file_from_a_manual_only_source_are_labelled_manual(conn, tmp_path):
+    load(conn, tmp_path, [sale(source="hibid", sale_id="H", premium="15%", lots=[lot()])])
+    r = run(conn, None)
+    assert r["manual_only"] is True
+    import webpage
+    html = webpage.render([], ext=ls.page_payload(conn, NOW))
+    assert "NOT AUTOMATED" in html and "Where each buy source" in html and "MANUAL-ONLY source: this lot" in html
+
+
+def test_page_shows_the_source_table_even_with_no_lots(conn):
+    import webpage
+    html = webpage.render([], ext=ls.page_payload(conn, NOW))
+    assert 'id="extst"' in html and "AUTOMATED" in html

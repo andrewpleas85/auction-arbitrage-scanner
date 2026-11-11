@@ -27,7 +27,7 @@ from engine.title_cleaner import DESIGNER_BRANDS, extract_brand, extract_models
 from models import Listing
 
 log = logging.getLogger("arbitrage.catalog")
-ALL_DOMAINS = ("fashion", "electronics", "computers", "cameras", "instruments", "collectibles", "tools", "gsa", "municibid", "publicsurplus", "govdeals", "ebay")
+ALL_DOMAINS = ("fashion", "electronics", "computers", "cameras", "instruments", "collectibles", "tools", "gsa", "municibid", "publicsurplus", "govdeals", "ebay", "illinois_ibid")
 SGW_DOMAINS = {"7": "electronics", "170": "cameras", "13": "instruments", "4": "collectibles"}
 PR_DOMAINS = {"electronics": "electronics", "computers": "computers", "tools-and-equipment": "tools"}
 
@@ -735,6 +735,13 @@ async def crawl(conn: sqlite3.Connection, http: httpx.AsyncClient, cfg, max_page
         from clients.govdeals_api import GovDealsApiClient
         for domain, listings in (await GovDealsApiClient(http).fetch_all(max_pages)).items():
             add(domain, listings, designer_only=domain == "fashion")
+    if "illinois_ibid" in want:  # state surplus + Treasurer lots: fetched automatically with the rest of the catalog; stored with their premium/tax read from the site
+        from clients import illinois_ibid
+        try:
+            res = await illinois_ibid.sync(conn, http)
+            stats["illinois_ibid"], stats["illinois_ibid_scanned"] = res["lots"], res["listed"]
+        except (httpx.HTTPError, PermissionError) as e:
+            stats["illinois_ibid_error"] = str(e)[:80]
     if "ebay" in want and cfg.ebay_client_id and cfg.ebay_client_secret:
         add_ebay = await _crawl_ebay(conn, http, cfg)
         stats["ebay"] = add_ebay

@@ -45,6 +45,22 @@ PROFILES = {
     "auctionzip": {"label": "AuctionZip", "priced": False, "note": "discovery feed only"},
 }
 
+AUTOMATED, MANUAL_ONLY, INTAKE = "AUTOMATED", "MANUAL-ONLY", "INTAKE-BY-DESIGN"
+CHECKED = "2026-11-11"
+SOURCE_STATUS = {
+    "illinois_ibid": {"label": "Illinois iBid", "status": AUTOMATED, "how": "fetched with the normal catalog run: main.py --catalog (domain illinois_ibid), clients/illinois_ibid.py", "blocker": None},
+    "facebook_marketplace": {"label": "Facebook Marketplace", "status": INTAKE, "how": "Muse reads Marketplace through Andrew's connected account and supplies JSON; fb_market.py's importer is the integration point", "blocker": None},
+    "cws_treasury": {"label": "CWS Marketing (Treasury TEOAF)", "status": MANUAL_ONLY,
+                     "blocker": f"CloudFront answers 403 'Request blocked' to automated requests on every page: the home page, /auctions, and the auction-info, catalog and lot-details URLs listed in its own public sitemap (checked {CHECKED}; the sitemap itself loads). "
+                                "Whether the catalog can be viewed in a browser without the $2,500 authorization is unconfirmed from here. Andrew decides about registering; nothing was registered."},
+    "hibid": {"label": "HiBid", "status": MANUAL_ONLY, "blocker": f"Cloudflare blocks automated requests: 'Sorry, you have been blocked' (403) on hibid.com, its robots.txt and /graphql (checked {CHECKED})"},
+    "ctbids": {"label": "CTBids (Caring Transitions)", "status": MANUAL_ONLY,
+               "blocker": "ctbids.com is a JavaScript app whose pages contain no lot data; the lots come only from its private, undocumented API, which was not used here (not a published interface; its terms were not reviewed)"},
+    "estatesales": {"label": "EstateSales.net", "status": MANUAL_ONLY, "blocker": f"its Terms of Service forbid collecting content with robots or spiders without written permission (read {CHECKED})"},
+    "auctionzip": {"label": "AuctionZip", "status": MANUAL_ONLY, "blocker": f"403 to automated requests, including robots.txt-allowed pages (checked {CHECKED})"},
+    "whatnot": {"label": "Whatnot", "status": MANUAL_ONLY, "blocker": "live selling: auctions run in real time inside the app, so there is no catalog to crawl"},
+}
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS auction_sales (
     source TEXT NOT NULL, sale_id TEXT NOT NULL, title TEXT, url TEXT, buyer_premium REAL, premium_source TEXT, sales_tax REAL, tax_source TEXT,
@@ -205,7 +221,7 @@ def assess_lot(conn: sqlite3.Connection, lot: sqlite3.Row, sale: sqlite3.Row, no
     profile = PROFILES[lot["source"]]
     t = sale_terms(profile, sale)
     title, desc = lot["title"], lot["description"] or ""
-    res = {"platform": lot["source"], "platform_label": profile["label"], "listing_id": f"{lot['sale_id']}-{lot['lot_id']}", "url": lot["url"] or sale["url"], "title": title,
+    res = {"manual_only": SOURCE_STATUS.get(lot["source"], {}).get("status") == MANUAL_ONLY, "platform": lot["source"], "platform_label": profile["label"], "listing_id": f"{lot['sale_id']}-{lot['lot_id']}", "url": lot["url"] or sale["url"], "title": title,
            "end": lot["ends"] or sale["ends"], "bid": lot["current_bid"] or 0.0, "failures": [], "evidence": {"terms": t}, "status": "unverified", "failed": None, "needs_check": None,
            "claimed": None, "source": lot["source"], "sale_id": lot["sale_id"], "pickup_only": t["pickup_only"], "distance_miles": t["distance_miles"]}
     fails = res["failures"]
@@ -309,6 +325,20 @@ def _finish(res: dict) -> dict:
     return res
 
 
+def source_status(conn: sqlite3.Connection) -> list[dict]:
+    """Every buy source with its status. AUTOMATED sources show what the last crawl stored; MANUAL-ONLY sources say exactly what blocks automation."""
+    ensure_schema(conn)
+    out = []
+    for key, v in SOURCE_STATUS.items():
+        row = {"source": key, **v, "lots": None, "last_fetched": None}
+        if v["status"] == AUTOMATED:
+            r = conn.execute("SELECT COUNT(*), MAX(imported_at) FROM auction_lots WHERE source=?", (key,)).fetchone()
+            row["lots"] = r[0]
+            row["last_fetched"] = datetime.fromtimestamp(r[1], timezone.utc).isoformat() if r[1] else None
+        out.append(row)
+    return out
+
+
 def leads(conn: sqlite3.Connection) -> list[dict]:
     ensure_schema(conn)
     conn.row_factory = sqlite3.Row
@@ -319,5 +349,5 @@ def page_payload(conn: sqlite3.Connection, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     results = [assess_lot(conn, lot, sale, now) for lot, sale in lot_rows(conn, now)]
     return {"verified": sorted([r for r in results if r["status"] == "verified"], key=lambda r: -r["evidence"].get("net", 0)),
-            "unverified": [r for r in results if r["status"] != "verified"], "leads": leads(conn),
+            "unverified": [r for r in results if r["status"] != "verified"], "leads": leads(conn), "sources": source_status(conn),
             "bar": {"min_net": evidence.MIN_NET, "min_return": evidence.MIN_RETURN, "max_pickup_miles": MAX_PICKUP_MILES}}

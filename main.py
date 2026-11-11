@@ -884,7 +884,7 @@ async def amain() -> None:
             path = webpage.write_site(site / "index.html", rows, args.web_refresh, watch=watch_rows, scrap=scrap_auctions, picks=picks,
                                       fb=fb_payload if fb_payload["verified"] or fb_payload["unverified"] else None,
                                       lux=lux_payload if lux_payload["verified"] or lux_payload["unverified"] else None, gate=gate_payload,
-                                      ext=ext_payload if ext_payload["verified"] or ext_payload["unverified"] or ext_payload["leads"] else None)
+                                      ext=ext_payload)
             print(f"wrote {path} with {len(rows)} items" + ("" if args.web_refresh else " (bids as of the last crawl)"))
         if args.serve:
             webpage.serve(site, args.port, lan=args.lan)
