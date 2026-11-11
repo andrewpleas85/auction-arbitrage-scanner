@@ -48,14 +48,19 @@ PROFILES = {
 AUTOMATED, MANUAL_ONLY, INTAKE = "AUTOMATED", "MANUAL-ONLY", "INTAKE-BY-DESIGN"
 CHECKED = "2026-11-11"
 SOURCE_STATUS = {
-    "illinois_ibid": {"label": "Illinois iBid", "status": AUTOMATED, "how": "fetched with the normal catalog run: main.py --catalog (domain illinois_ibid), clients/illinois_ibid.py", "blocker": None},
+    "illinois_ibid": {"label": "Illinois iBid", "status": AUTOMATED, "how": "fetched with the normal catalog run: main.py --catalog (domain illinois_ibid), clients/illinois_ibid.py. "
+                      "It is CMS state surplus (the Treasurer's unclaimed-property jewelry actually sells on HiBid; iBid has its own Jewelry & Exotic Collectibles category, empty on 2026-11-11). "
+                      "Muse independently confirmed it is plain server-rendered HTML with a public RSS feed per seller", "blocker": None},
     "facebook_marketplace": {"label": "Facebook Marketplace", "status": INTAKE, "how": "Muse reads Marketplace through Andrew's connected account and supplies JSON; fb_market.py's importer is the integration point", "blocker": None},
     "cws_treasury": {"blocker_type": "bot block (CloudFront WAF 403); login/account requirement unconfirmed", "label": "CWS Marketing (Treasury TEOAF)", "status": MANUAL_ONLY,
-                     "blocker": f"CloudFront answers 403 'Request blocked' to automated requests on every page: the home page, /auctions, and the auction-info, catalog and lot-details URLs listed in its own public sitemap (checked {CHECKED}; the sitemap itself loads). "
-                                "Whether the catalog can be viewed in a browser without the $2,500 authorization is unconfirmed from here. Andrew decides about registering; nothing was registered."},
-    "hibid": {"blocker_type": "bot block (Cloudflare challenge/403)", "label": "HiBid", "status": MANUAL_ONLY, "blocker": f"Cloudflare blocks automated requests: 'Sorry, you have been blocked' (403) on hibid.com, its robots.txt and /graphql (checked {CHECKED})"},
+                     "blocker": f"Bot detection. CloudFront answers 403 'Request blocked' to automated requests on every page: the home page, /auctions, and the auction-info, catalog and lot-details URLs listed in its own public sitemap (checked {CHECKED}; the sitemap itself loads). "
+                                "Muse reports the catalog IS public to view (only bidding needs the approved account and the $2,500 authorization): plain HTTP gets a stub, headless Chromium gets 403, headed Chromium works. "
+                                "I did not try to defeat the bot detection with a headed browser. Upcoming-sale DISCOVERY is automated from cwsmarketing.com (clients/cws_calendar.py). Andrew decides about registering; nothing was registered."},
+    "hibid": {"blocker_type": "bot block (Cloudflare challenge/403)", "label": "HiBid", "status": MANUAL_ONLY, "blocker": f"Bot detection: Cloudflare blocks my automated requests ('Sorry, you have been blocked', 403) on hibid.com, its robots.txt and /graphql (checked {CHECKED}). Prices are client-side (Angular). "
+                          "Muse reports its own browser reads the public GraphQL feed without a token; I am not building a client against that undocumented endpoint or a browser fallback past Cloudflare, so Muse feeds the files"},
     "ctbids": {"blocker_type": "JS rendering (private API only)", "label": "CTBids (Caring Transitions)", "status": MANUAL_ONLY,
-               "blocker": "ctbids.com is a JavaScript app whose pages contain no lot data; the lots come only from its private, undocumented API, which was not used here (not a published interface; its terms were not reviewed)"},
+               "blocker": "JS rendering. Plain HTTP returns an empty shell for every page; robots.txt allows everything. A headless Chrome render of a location page works, but the sale page timed out twice (100-120 s), so it is not reliable in a catalog run; "
+                          "the other route is its private, undocumented API, which I did not use. Muse reports its browser reads item pages (title, bid, bid count, premium 15% or 18% per sale, shipping) so Muse feeds the files"},
     "estatesales": {"blocker_type": "robots/ToS (Terms of Service forbid automated collection, including browser agents)", "label": "EstateSales.net", "status": MANUAL_ONLY, "blocker": f"its Terms of Service forbid collecting content with robots or spiders without written permission (read {CHECKED})"},
     "auctionzip": {"blocker_type": "bot block (403)", "label": "AuctionZip", "status": MANUAL_ONLY, "blocker": f"403 to automated requests, including robots.txt-allowed pages (checked {CHECKED})"},
     "whatnot": {"blocker_type": "live/manual by nature", "label": "Whatnot", "status": MANUAL_ONLY, "blocker": "live selling: auctions run in real time inside the app, so there is no catalog to crawl"},

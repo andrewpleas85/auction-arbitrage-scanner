@@ -27,7 +27,7 @@ from engine.title_cleaner import DESIGNER_BRANDS, extract_brand, extract_models
 from models import Listing
 
 log = logging.getLogger("arbitrage.catalog")
-ALL_DOMAINS = ("fashion", "electronics", "computers", "cameras", "instruments", "collectibles", "tools", "gsa", "municibid", "publicsurplus", "govdeals", "ebay", "illinois_ibid")
+ALL_DOMAINS = ("fashion", "electronics", "computers", "cameras", "instruments", "collectibles", "tools", "gsa", "municibid", "publicsurplus", "govdeals", "ebay", "illinois_ibid", "cws_calendar")
 SGW_DOMAINS = {"7": "electronics", "170": "cameras", "13": "instruments", "4": "collectibles"}
 PR_DOMAINS = {"electronics": "electronics", "computers": "computers", "tools-and-equipment": "tools"}
 
@@ -742,6 +742,13 @@ async def crawl(conn: sqlite3.Connection, http: httpx.AsyncClient, cfg, max_page
             stats["illinois_ibid"], stats["illinois_ibid_scanned"] = res["lots"], res["listed"]
         except (httpx.HTTPError, PermissionError) as e:
             stats["illinois_ibid_error"] = str(e)[:80]
+    if "cws_calendar" in want:  # discovery only: upcoming Treasury / CWS sales from the public marketing site (the lot catalog itself is Muse-fed)
+        from clients import cws_calendar
+        try:
+            res = await cws_calendar.sync(conn, http)
+            stats["cws_calendar"], stats["cws_calendar_scanned"] = res["leads"], res["cards"]
+        except httpx.HTTPError as e:
+            stats["cws_calendar_error"] = str(e)[:80]
     if "ebay" in want and cfg.ebay_client_id and cfg.ebay_client_secret:
         add_ebay = await _crawl_ebay(conn, http, cfg)
         stats["ebay"] = add_ebay

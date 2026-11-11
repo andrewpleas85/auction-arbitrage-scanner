@@ -1,4 +1,4 @@
-"""Illinois iBid (ibid.illinois.gov): State of Illinois surplus and Treasurer unclaimed-property lots (a PHP auction site, server-rendered).
+"""Illinois iBid (ibid.illinois.gov): State of Illinois (CMS) surplus lots (a PHP auction site, server-rendered). The Treasurer's unclaimed-property jewelry sells on HiBid, not here.
 
 Verified from the live pages on 2026-11-11 (robots.txt blocks only /admin/, /ckeditor/, /images/, /js/, /includes/, /themes/, /uploaded/):
   * buyer's fee: fees.php lists "Buyer Fee 2.0000%" (the 'Final Price Fee' rows are SELLER fees)
