@@ -36,6 +36,7 @@ import catalog
 import evidence
 import identity as ident_mod
 import repair
+import sell_channels
 from engine import knowledge as kb
 from engine.title_cleaner import model_identity
 
@@ -194,7 +195,12 @@ def channels(value: float, kind: str, title: str, buy: float, net_bar: float | N
         net = rev - buy
         out[name] = {"sale_price": round(sale, 2), "revenue": round(rev, 2), "net": round(net, 2),
                      "return": round(net / buy, 3) if buy else None, "costs": costs,
-                     "max_buy": round(max_buy(rev, net_bar), 2)}
+                     "max_buy": round(max_buy(rev, net_bar), 2), "counts": name == "eBay shipped" or LOCAL_CHANNEL_COUNTS}
+    for name, o in sell_channels.options(kind, title, value, ship).items():  # Swappa, Depop, Mercari, Chrono24, Grailed, StockX, Sweetwater, eBay Live, OfferUp
+        net = o["revenue"] - buy
+        out[name] = {"sale_price": o["sale_price"], "revenue": o["revenue"], "net": round(net, 2), "return": round(net / buy, 3) if buy else None,
+                     "costs": {"fee": o["fee"], "ship_mode": o["ship_mode"], "price_basis": o["price_basis"]}, "max_buy": round(max_buy(o["revenue"], net_bar), 2),
+                     "counts": o["counts"], "note": o["note"]}
     return out
 
 
@@ -213,7 +219,7 @@ def _label_factor(label: str) -> float:
 
 
 def _best_channel(ch: dict) -> str:
-    usable = ["eBay shipped"] + (["local cash"] if LOCAL_CHANNEL_COUNTS else [])
+    usable = [n for n, c in ch.items() if c.get("counts")]
     return max(usable, key=lambda n: ch[n]["net"])
 
 
@@ -310,6 +316,12 @@ def assess(conn: sqlite3.Connection, row, now: datetime | None = None) -> dict:
         ev["best_channel"], ev["net"], ev["return"], ev["max_buy"] = chosen["channel"], chosen["net"], chosen["return"], chosen["max_buy"]
         if ev.get("demand"):
             ev["demand"]["repair_days_included"] = chosen["days_added"]  # repair time is shown; no time-to-sell is invented
+        floors = sell_channels.buyout_floors(kind, title, v_work) if cls["class"] in ("working", "cosmetic") else []
+        if floors and floors[0]["low"] is not None:
+            fn = floors[0]["low"] - buy
+            fr = fn / buy if buy else None
+            ev["buyout_floor"] = {"floors": floors, "net_at_low_floor": round(fn, 2), "return_at_low_floor": round(fr, 3) if fr is not None else None,
+                                  "clears_at_floor": sell_channels.floor_signal(fn, fr, net_bar, MIN_RETURN)}
         ev["local_note"] = None if LOCAL_CHANNEL_COUNTS else (f"local cash at {LOCAL_FACTOR:.0%} of the sold median would net "
                                                               f"${chosen['channels']['local cash']['net']:,.0f} (assumed price, not counted)")
         if not passing:

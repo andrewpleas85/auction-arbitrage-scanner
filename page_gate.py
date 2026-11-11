@@ -19,6 +19,7 @@ import evidence
 import fb_market
 import identity as ident_mod
 import repair
+import sell_channels
 from engine.title_cleaner import model_identity
 
 MIN_RECENT_SALES = 3
@@ -29,17 +30,21 @@ def _desc(conn: sqlite3.Connection, platform: str, listing_id) -> str:
     return (r[0] if r else "") or ""
 
 
-def _auction_net(value: float, econ: dict, bid: float, fix: float, factor: float, net_bar: float, extra_cost: float = 0.0) -> dict:
+def _auction_net(value: float, econ: dict, bid: float, fix: float, factor: float, net_bar: float, extra_cost: float = 0.0, kind: str = "", title: str = "") -> dict:
     """Net profit and return at the price an auction is expected to reach (bid, or the site's climb share of the verified value, whichever is higher)."""
     price = max(bid or 0.0, (econ.get("climb") or 0.0) * value)
     prem, tax, inbound = econ.get("prem", 0.0), econ.get("tax", 0.0), econ.get("inbound", 0.0)
     fee, order = catalog.fees_for(econ, value * factor)
     rev = value * factor * (1 - fee - econ.get("returns", 0.0)) - order - econ.get("ship_out", 0.0)
+    channel = "eBay shipped"
+    for name, o in sell_channels.options(kind, title, value * factor, econ.get("ship_out", 0.0)).items():  # Swappa, Depop, Mercari ... (counted channels only)
+        if o["counts"] and o["revenue"] > rev:
+            rev, channel = o["revenue"], name
     all_in = price * (1 + prem) * (1 + tax) + inbound + fix + extra_cost
     net = rev - all_in
     mult = (1 + prem) * (1 + tax)
     a_max = max(0.0, min(rev - net_bar, rev / (1 + evidence.MIN_RETURN)))
-    return {"price_assumed": round(price, 2), "all_in": round(all_in, 2), "revenue": round(rev, 2), "net": round(net, 2),
+    return {"price_assumed": round(price, 2), "all_in": round(all_in, 2), "revenue": round(rev, 2), "channel": channel, "net": round(net, 2),
             "return": round(net / all_in, 3) if all_in else None, "max_bid": round(max(0.0, (a_max - inbound - fix - extra_cost) / mult), 2),
             "net_bar": net_bar}
 
@@ -94,10 +99,10 @@ def assess_row(conn: sqlite3.Connection, row: dict, now: datetime | None = None,
     net_bar = tier["net_bar"]
     pv = repair.paths(value, cls)
     ev.update({"working_value": round(value, 2), "as_is_value": round(pv["as_is_value"], 2), "value_basis": pv["basis"]})
-    plays = {"as-is": {**_auction_net(pv["as_is_value"], econ, row.get("bid") or 0.0, fix, factor, net_bar), "value": round(pv["as_is_value"], 2), "days_added": 0.0}}
+    plays = {"as-is": {**_auction_net(pv["as_is_value"], econ, row.get("bid") or 0.0, fix, factor, net_bar, kind=row.get("kind") or "", title=title), "value": round(pv["as_is_value"], 2), "days_added": 0.0}}
     plays["as-is"]["passes"] = plays["as-is"]["net"] >= net_bar and (plays["as-is"]["return"] or 0) >= evidence.MIN_RETURN
     if cls["class"] == "repairable":
-        rp = _auction_net(value, econ, row.get("bid") or 0.0, fix, factor, net_bar + repair.REPAIR_CUSHION, extra_cost=cls["repair_cost"])
+        rp = _auction_net(value, econ, row.get("bid") or 0.0, fix, factor, net_bar + repair.REPAIR_CUSHION, extra_cost=cls["repair_cost"], kind=row.get("kind") or "", title=title)
         plays["repair"] = {**rp, "value": round(value, 2), "repair_cost": cls["repair_cost"], "repair_source": cls["repair_source"], "days_added": cls["repair_days"],
                            "passes": rp["net"] >= net_bar + repair.REPAIR_CUSHION and (rp["return"] or 0) >= evidence.MIN_RETURN}
         ev["repaired_value"] = round(value, 2)
@@ -109,6 +114,12 @@ def assess_row(conn: sqlite3.Connection, row: dict, now: datetime | None = None,
     ev["net"], ev["return"], ev["max_bid"], ev["price_assumed"], ev["all_in"] = c["net"], c["return"], c["max_bid"], c["price_assumed"], c["all_in"]
     if ev.get("demand"):
         ev["demand"]["repair_days_included"] = c["days_added"]
+    floors = sell_channels.buyout_floors(row.get("kind") or "", title, value) if cls["class"] in ("working", "cosmetic") else []
+    if floors and floors[0]["low"] is not None:
+        fnet = floors[0]["low"] - c["all_in"]
+        fret = fnet / c["all_in"] if c["all_in"] else None
+        ev["buyout_floor"] = {"floors": floors, "net_at_low_floor": round(fnet, 2), "return_at_low_floor": round(fret, 3) if fret is not None else None,
+                              "clears_at_floor": sell_channels.floor_signal(fnet, fret, net_bar, evidence.MIN_RETURN)}
 
     if cls["class"] in ("untested_unknown", "parts_only"):
         fails.append(("condition", f"{cls['reason']}; priced at PARTS value ${pv['as_is_value']:,.0f}, not as a working unit"))

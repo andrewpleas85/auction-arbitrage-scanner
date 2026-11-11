@@ -593,6 +593,7 @@ async def amain() -> None:
     ap.add_argument("--web-all", action="store_true", help="put EVERY profitable item on the page, sortable as a whole (refresh takes longer)")
     ap.add_argument("--sync-txauction", action="store_true", help="re-read the TXAuction auction pages listed in txauction.py (about 4 requests)")
     ap.add_argument("--import-facebook", metavar="FILE", help="load a Facebook Marketplace export (JSON or CSV) and print the confidence-gate result for every listing; no network, no paid quota")
+    ap.add_argument("--import-lots", metavar="FILE", help="load an auction-sources export (CWS/Treasury, HiBid, Illinois iBid, CTBids, discovery leads) with per-sale buyer's premium; no network")
     ap.add_argument("--serve", action="store_true", help="serve the page at http://127.0.0.1:PORT (this machine only)")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--lan", action="store_true", help="with --serve: let other computers on your local network open the page (no password)")
@@ -774,6 +775,15 @@ async def amain() -> None:
             print(f"{r['status']:<34} {r['listings']:>3} listings  {r['name'][:34]:<34}{extra}")
         print(f"{len(res)} groups" + (" (dry run, nothing spent)" if args.dry_run_ranges else ""))
         return
+    if args.import_lots:
+        import lot_sources
+        conn = db.connect(cfg.db_path)
+        print(lot_sources.import_file(conn, args.import_lots))
+        pay = lot_sources.page_payload(conn)
+        for r in pay["verified"] + pay["unverified"]:
+            print(f"[{r['status'].upper():10}] {r['platform_label']} {r['listing_id']}  {r['title'][:50]}  " + (f"net ${r['evidence']['net']:,.0f}" if r["status"] == "verified" else f"FAILED: {r['failed']}"))
+        print(f"{len(pay['leads'])} discovery lead(s)")
+        return
     if args.import_facebook:
         import fb_market
         conn = db.connect(cfg.db_path)
@@ -852,11 +862,14 @@ async def amain() -> None:
             rows = gate_payload["main"]
             import fb_market
             fb_payload = fb_market.page_payload(conn)  # Marketplace rows the owner imported; empty until a file is loaded
+            import lot_sources
+            ext_payload = lot_sources.page_payload(conn)
             import luxury_goods
             lux_payload = luxury_goods.page_payload(conn, snap=tx_snap)
             path = webpage.write_site(site / "index.html", rows, args.web_refresh, watch=watch_rows, scrap=scrap_auctions, picks=picks,
                                       fb=fb_payload if fb_payload["verified"] or fb_payload["unverified"] else None,
-                                      lux=lux_payload if lux_payload["verified"] or lux_payload["unverified"] else None, gate=gate_payload)
+                                      lux=lux_payload if lux_payload["verified"] or lux_payload["unverified"] else None, gate=gate_payload,
+                                      ext=ext_payload if ext_payload["verified"] or ext_payload["unverified"] or ext_payload["leads"] else None)
             print(f"wrote {path} with {len(rows)} items" + ("" if args.web_refresh else " (bids as of the last crawl)"))
         if args.serve:
             webpage.serve(site, args.port, lan=args.lan)

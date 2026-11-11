@@ -1,0 +1,8 @@
+{"sales": [
+ {"source": "hibid", "sale_id": "H-1001", "title": "Oak Park Estate Auction", "url": "https://www.hibid.com/lot/example", "buyer_premium": "15%", "premium_source": "terms: 15% buyer's premium", "sales_tax": "10.25%",
+  "pickup_only": true, "pickup_location": "Oak Park, IL", "distance_miles": 9, "ends": "2026-12-20T20:00:00Z",
+  "lots": [{"lot_id": "12", "title": "Denon AVR-X1700H receiver", "description": "Denon AVR-X1700H 7.2 receiver, works.", "current_bid": 25, "url": "https://www.hibid.com/lot/example/12"}]},
+ {"source": "cws_treasury", "sale_id": "T-77", "title": "Treasury TEOAF jewelry and bags", "url": "https://bid.cwsmarketing.com/auctions/example", "ships": true, "pickup_only": false, "ends": "2026-12-20T20:00:00Z",
+  "lots": [{"lot_id": "5", "title": "14k yellow gold chain necklace", "description": "14k yellow gold chain, 20 grams", "current_bid": 300, "weight_g": 20, "karat": 14}]}
+ ],
+ "leads": [{"source": "estatesales", "lead_id": "ES-1", "title": "Evanston estate sale", "location": "Evanston, IL", "distance_miles": 12, "dates": "2026-11-14 to 2026-11-15", "notes": "jewelry, designer bags listed"}]}

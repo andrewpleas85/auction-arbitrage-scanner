@@ -1,0 +1,137 @@
+import json
+import time
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+import db
+import free_comp_fillers as ff
+import lot_sources as ls
+
+NOW = datetime(2026, 11, 11, tzinfo=timezone.utc)
+FUTURE = (NOW + timedelta(days=1)).isoformat()
+RECEIVER = "Denon AVR-X1700H receiver"
+
+
+@pytest.fixture
+def conn(tmp_path):
+    c = db.connect(str(tmp_path / "t.db"))
+    for i, p in enumerate([300, 310, 290, 305, 295, 300, 298]):
+        c.execute("INSERT OR IGNORE INTO sold_sales (provider, query, title, price, sold_date, fetched_at) VALUES (?,?,?,?,?,?)",
+                  ("s", "q", f"Denon AVR-X1700H 7.2 Ch Receiver #{i}", p, (NOW - timedelta(days=10 + i)).isoformat(), int(time.time())))
+    c.commit()
+    return c
+
+
+def load(conn, tmp_path, sales, leads=None):
+    p = tmp_path / "in.json"
+    p.write_text(json.dumps({"sales": sales, "leads": leads or []}))
+    return ls.import_file(conn, p)
+
+
+def sale(source="hibid", sale_id="S1", premium=None, lots=None, **kw):
+    s = {"source": source, "sale_id": sale_id, "title": "Estate auction", "url": "https://example.test/s", "ends": FUTURE, "pickup_only": True, "distance_miles": 15, "lots": lots or []}
+    if premium is not None:
+        s["buyer_premium"] = premium
+        s["premium_source"] = "terms text: 'a 15% buyer's premium applies'"
+    return {**s, **kw}
+
+
+def lot(title=RECEIVER, desc="Denon AVR-X1700H 7.2 channel receiver. Works great, tested.", bid=20, lot_id="1", **kw):
+    return {"lot_id": lot_id, "title": title, "description": desc, "current_bid": bid, "url": "https://example.test/l", **kw}
+
+
+def run(conn, source_sale):
+    lot_, sale_ = ls.lot_rows(conn, NOW)[0]
+    return ls.assess_lot(conn, lot_, sale_, NOW)
+
+
+def test_premium_is_read_per_sale_and_changes_the_cost(conn, tmp_path):
+    load(conn, tmp_path, [sale(sale_id="LOW", premium="10%", lots=[lot()]), sale(sale_id="HIGH", premium=18, lots=[lot()])])
+    got = {s["sale_id"]: ls.assess_lot(conn, l, s, NOW) for l, s in ls.lot_rows(conn, NOW)}
+    assert got["LOW"]["evidence"]["terms"]["premium"] == 0.10 and got["HIGH"]["evidence"]["terms"]["premium"] == 0.18   # parsed from each sale, not a source constant
+    assert got["HIGH"]["evidence"]["all_in"] > got["LOW"]["evidence"]["all_in"] and got["LOW"]["evidence"]["net"] > got["HIGH"]["evidence"]["net"]
+    assert got["LOW"]["status"] == "verified" and "premium" in got["LOW"]["evidence"]["terms"]["premium_source"].lower()
+
+
+def test_a_sale_with_no_premium_in_its_terms_cannot_be_costed(conn, tmp_path):
+    load(conn, tmp_path, [sale(sale_id="NOPREM", lots=[lot()])])
+    r = run(conn, None)
+    assert r["status"] == "unverified" and r["failed"] == "buyer's premium" and "varies per sale" in r["failures"][0]["why"] and "evidence" in r
+    assert "net" not in r["evidence"]                                                                        # nothing was priced with a guessed premium
+
+
+@pytest.mark.parametrize("source", ["hibid", "ctbids", "illinois_ibid"])
+def test_per_sale_premium_is_required_for_every_estate_and_state_source(conn, tmp_path, source):
+    load(conn, tmp_path, [sale(source=source, lots=[lot()])])
+    assert run(conn, None)["failed"] == "buyer's premium"
+
+
+def test_cws_treasury_has_a_stated_zero_premium_zero_tax_profile_and_buyer_arranged_shipping(conn, tmp_path):
+    load(conn, tmp_path, [sale(source="cws_treasury", sale_id="T1", pickup_only=False, ships=True, lots=[lot()])])
+    r = run(conn, None)
+    t = r["evidence"]["terms"]
+    assert t["premium"] == 0.0 and t["tax"] == 0.0 and "Treasury terms" in t["premium_source"] and not t["pickup_only"]
+    assert r["evidence"]["inbound_basis"].startswith("ESTIMATE")
+    assert r["evidence"]["all_in"] == pytest.approx(r["evidence"]["price_assumed"] + ls.INBOUND_DEFAULT, abs=0.01)   # premium 0, tax 0: price + shipping only
+    load(conn, tmp_path, [sale(source="cws_treasury", sale_id="T2", premium="5%", pickup_only=False, ships=True, lots=[lot(lot_id="2")])])  # a sale record overrides the stated default
+    assert {s["sale_id"]: ls.sale_terms(ls.PROFILES["cws_treasury"], s)["premium"] for _, s in ls.lot_rows(conn, NOW)} == {"T1": 0.0, "T2": 0.05}
+
+
+def test_pickup_only_far_away_is_marked_and_fails_the_distance_rule_unless_a_shipper_exists(conn, tmp_path):
+    load(conn, tmp_path, [sale(source="illinois_ibid", sale_id="IL", premium="0%", distance_miles=200, lots=[lot()])])
+    r = run(conn, None)
+    assert r["pickup_only"] and r["distance_miles"] == 200 and "pickup distance" in [f["check"] for f in r["failures"]]
+    load(conn, tmp_path, [sale(source="illinois_ibid", sale_id="IL2", premium="0%", distance_miles=200, pickup_only=False, ships=True, lots=[lot(lot_id="2")])])
+    r2 = [ls.assess_lot(conn, l, s, NOW) for l, s in ls.lot_rows(conn, NOW) if s["sale_id"] == "IL2"][0]
+    assert not r2["pickup_only"] and "pickup distance" not in [f["check"] for f in r2["failures"]]
+
+
+def test_jewelry_with_karat_and_grams_feeds_the_melt_model(conn, tmp_path, monkeypatch):
+    monkeypatch.setattr(ff, "spot_price_gram_24k", lambda metal="gold", http=None: (133.0, "test spot"))
+    load(conn, tmp_path, [sale(source="ctbids", sale_id="C1", premium="15%", lots=[lot("14k yellow gold chain necklace", "14k yellow gold chain, 20 grams", bid=1, weight_g=20, karat=14)])])
+    r = run(conn, None)
+    ev = r["evidence"]
+    assert ev["play"] == "melt" and ev["melt"]["weight_grams"] == 20 and ev["melt"]["purity_pct"] == pytest.approx(58.33, abs=0.01)
+    assert ev["value"] == pytest.approx(20 * 14 / 24 * 133 * 0.85, abs=0.5) and ev["max_bid"] > 0
+    assert r["status"] == "unverified" and r["failed"] == "profit bar"                                       # at the expected close a 15% premium + tax eats the margin
+
+
+def test_stones_in_the_weight_make_melt_an_upper_bound_only(conn, tmp_path, monkeypatch):
+    monkeypatch.setattr(ff, "spot_price_gram_24k", lambda metal="gold", http=None: (133.0, "test spot"))
+    load(conn, tmp_path, [sale(source="cws_treasury", sale_id="C2", premium="0%", lots=[lot("14k gold ring with diamond", "14k gold ring with diamond, 12 grams", bid=1, weight_g=12, karat=14)])])
+    r = run(conn, None)
+    assert "stones in the weight" in [f["check"] for f in r["failures"]]
+
+
+def test_discovery_sources_are_never_priced_but_leads_are_listed(conn, tmp_path):
+    res = load(conn, tmp_path, [{"source": "estatesales", "sale_id": "E1", "lots": [lot()]}],
+               leads=[{"source": "estatesales", "lead_id": "L1", "title": "Oak Park estate sale", "location": "Oak Park, IL", "distance_miles": 9, "dates": "2026-11-14"}])
+    assert res["sales"] == 0 and res["leads"] == 1 and res["rejected"] and "discovery-only" in res["rejected"][0][1]
+    pay = ls.page_payload(conn, NOW)
+    assert pay["leads"][0]["priced"] is False and pay["leads"][0]["label"] == "EstateSales.net" and pay["verified"] == [] and pay["unverified"] == []
+
+
+def test_designer_bags_from_these_sources_go_through_the_authenticity_gate(conn, tmp_path):
+    load(conn, tmp_path, [sale(source="cws_treasury", sale_id="B1", premium="0%", pickup_only=False, ships=True,
+                               lots=[lot("Louis Vuitton Speedy 30 Monogram Handbag", "Nice bag.", bid=10)])])
+    r = run(conn, None)
+    assert r["failed"] == "authenticity" and r["status"] == "unverified"
+
+
+def test_rate_parsing():
+    assert ls.parse_rate("15%") == 0.15 and ls.parse_rate(15) == 0.15 and ls.parse_rate(0.15) == 0.15 and ls.parse_rate("") is None
+
+
+def test_page_renders_the_other_sources_section_with_leads(conn, tmp_path):
+    import webpage
+    load(conn, tmp_path, [sale(sale_id="P1", premium="12%", lots=[lot()])], leads=[{"source": "estatesales", "lead_id": "L1", "title": "Evanston estate sale", "dates": "2026-11-14"}])
+    html = webpage.render([], ext=ls.page_payload(conn, NOW))
+    assert 'id="extbox"' in html and "buyer's premium read per sale" in html and "renderExt()" in html and "Evanston estate sale" in html
+
+
+def test_sample_fixture_loads_and_is_costed_per_sale(conn):
+    res = ls.import_file(conn, "tests/fixtures/lots_sample.json")
+    assert res == {"sales": 2, "lots": 2, "leads": 1, "rejected": []}
+    terms = {s["sale_id"]: ls.sale_terms(ls.PROFILES[s["source"]], s) for _, s in ls.lot_rows(conn, datetime(2026, 11, 11, tzinfo=timezone.utc))}
+    assert terms["H-1001"]["premium"] == 0.15 and terms["H-1001"]["tax"] == 0.1025 and terms["T-77"]["premium"] == 0.0 and terms["T-77"]["tax"] == 0.0

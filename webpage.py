@@ -768,13 +768,22 @@ details.more{width:100%}details.more>summary{cursor:pointer;color:var(--ink);fon
 <label title="Texas auction lots that have no resale estimate yet are listed with question marks; tick to hide them"><input type="checkbox" id="noest"> Hide lots with no estimate</label>
 <label><input type="checkbox" id="lux"> Designer only</label>
 </div></details>
-<span class="dim" id="count"></span> <a href="#watchbox" id="gowatch" class="bid" style="margin-left:10px;display:none">Watch list: <b id="gowatchn">0</b> lots ↓</a> <a href="#" id="gotx" class="bid" style="margin-left:6px;display:none" title="Shows every valued TXAuction lot in the main table, ignoring the return and closing-date filters">TXAuction in the table: <b id="gotxn">0</b> lots</a> <a href="#repbox" id="gorep" class="bid" style="margin-left:6px;display:none">Repair plays: <b id="gorepn">0</b> ↓</a> <a href="#unvbox" id="gounv" class="bid" style="margin-left:6px;display:none">Unverified claims: <b id="gounvn">0</b> ↓</a> <a href="#luxbox" id="golux" class="bid" style="margin-left:6px;display:none">Designer: <b id="goluxn">0</b> verified ↓</a> <a href="#fbbox" id="gofb" class="bid" style="margin-left:6px;display:none">Facebook: <b id="gofbn">0</b> verified ↓</a> <a href="#picksbox" id="gopicks" class="bid" style="margin-left:6px;display:none">Pricer picks: <b id="gopicksn">0</b> ↓</a> <a href="#scrapbox" id="goscrap" class="bid" style="margin-left:6px;display:none">Scrap lots: <b id="goscrapn">0</b> ↓</a></div></header>
+<span class="dim" id="count"></span> <a href="#watchbox" id="gowatch" class="bid" style="margin-left:10px;display:none">Watch list: <b id="gowatchn">0</b> lots ↓</a> <a href="#" id="gotx" class="bid" style="margin-left:6px;display:none" title="Shows every valued TXAuction lot in the main table, ignoring the return and closing-date filters">TXAuction in the table: <b id="gotxn">0</b> lots</a> <a href="#extbox" id="goext" class="bid" style="margin-left:6px;display:none">Other sources: <b id="goextn">0</b> verified ↓</a> <a href="#repbox" id="gorep" class="bid" style="margin-left:6px;display:none">Repair plays: <b id="gorepn">0</b> ↓</a> <a href="#unvbox" id="gounv" class="bid" style="margin-left:6px;display:none">Unverified claims: <b id="gounvn">0</b> ↓</a> <a href="#luxbox" id="golux" class="bid" style="margin-left:6px;display:none">Designer: <b id="goluxn">0</b> verified ↓</a> <a href="#fbbox" id="gofb" class="bid" style="margin-left:6px;display:none">Facebook: <b id="gofbn">0</b> verified ↓</a> <a href="#picksbox" id="gopicks" class="bid" style="margin-left:6px;display:none">Pricer picks: <b id="gopicksn">0</b> ↓</a> <a href="#scrapbox" id="goscrap" class="bid" style="margin-left:6px;display:none">Scrap lots: <b id="goscrapn">0</b> ↓</a></div></header>
 <main><div class="wrap"><table id="t"><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table></div>
 <div class="wrap" id="watchbox" style="margin-top:28px" hidden>
 <h2 style="font-size:1.05rem;margin:0 0 4px">Watch list: lots without an eBay sold price</h2>
 <p class="sub" style="margin:0 0 10px">Two groups: lots near Chicago from BidProwl (GovDeals, Public Surplus, Municibid, GSA and others), and TXAuction lots that ship from Texas (US Marshals designer goods, jewelry, watches, coins, art). Not scored against eBay sold prices. A resale estimate shows where one exists: a hand-set value from sold lookups, or gold melt plus diamonds for single-piece jewelry. Pick Source = TXAuction to see the new auctions.</p>
 <label>Source <select id="wsrc"><option value="">all</option></select></label> <label>Type <select id="wtopic"><option value="">all</option></select></label> <label>Distance <select id="wband"><option value="">all</option><option value="near">near only</option><option value="far">worth a drive only</option><option value="ships">ships from Texas</option></select></label> <label><input type="checkbox" id="wval"> Only lots with a resale estimate</label> <span class="dim" id="wcount"></span>
 <table id="wt"><thead><tr><th>Item</th><th>Type</th><th>Source</th><th>Bid now</th><th>Bids</th><th>Est. resale (low-high)</th><th>Ends in</th><th>Where</th></tr></thead><tbody id="wbody"></tbody></table>
+</div>
+<div class="wrap" id="extbox" style="margin-top:28px" hidden>
+<h2 style="font-size:1.05rem;margin:0 0 4px">Other auction sources: Treasury (CWS), HiBid, Illinois iBid, CTBids (buyer's premium read per sale)</h2>
+<p class="sub" style="margin:0 0 10px" id="extnote"></p>
+<table id="extvt"><thead><tr><th>Item</th><th>Source and sale terms</th><th>Expected price (all-in)</th><th>Value basis</th><th>Net</th><th>Max bid</th></tr></thead><tbody id="extvbody"></tbody></table>
+<h3 style="font-size:.95rem;margin:18px 0 4px">Unverified</h3>
+<table id="extut"><thead><tr><th>Item</th><th>Source and sale terms</th><th>Bid</th><th>Failed check</th><th>Why</th></tr></thead><tbody id="extubody"></tbody></table>
+<h3 style="font-size:.95rem;margin:18px 0 4px">Estate sale leads (discovery only: not priced)</h3>
+<table id="extlt"><thead><tr><th>Lead</th><th>Source</th><th>Where</th><th>When</th><th>Notes</th></tr></thead><tbody id="extlbody"></tbody></table>
 </div>
 <div class="wrap" id="repbox" style="margin-top:28px" hidden>
 <h2 style="font-size:1.05rem;margin:0 0 4px">Repair plays: auction lots that state a repairable defect</h2>
@@ -1012,6 +1021,21 @@ function playCell(r){const e=r.evidence, td=el("td","meta"), id=e.identity||{};
   if(rp) td.append(el("div","","repaired value "+money(rp.value)+" − repair "+money(rp.repair_cost)+" (estimate) → net "+money(rp.net)+", +"+rp.days_added+" days"));
   for(const k of (id.risks||[])) td.append(el("div","neg",k));
   return td;}
+function renderExt(){
+  const X=D.ext; const box=$("extbox"); box.hidden=!X||(!X.verified.length&&!X.unverified.length&&!X.leads.length); $("goext").style.display=box.hidden?"none":"inline-block";
+  if(box.hidden) return; $("goextn").textContent=String(X.verified.length);
+  $("extnote").textContent=`Each sale's buyer's premium and tax are read from that sale's own terms (premium varies per sale; a lot whose sale states none cannot be costed). Same gate as everywhere else: high identity, spec-matched sold comps, the ${money(X.bar.min_net)} / ${Math.round(X.bar.min_return*100)}% bar. Pickup-only lots beyond ${X.bar.max_pickup_miles} miles fail the Chicago-metro rule. Jewelry with karat and gram weights is valued by melt.`;
+  const terms=r=>{const t=r.evidence.terms||{}, d=el("div","meta"); d.append(el("div","",r.platform_label+(r.sale_id?" sale "+r.sale_id:""))); d.append(el("div","","premium "+(t.premium==null?"NOT READ":Math.round(t.premium*1000)/10+"%")+" ("+(t.premium_source||"")+"); tax "+Math.round((t.tax||0)*10000)/100+"%"));
+    d.append(el("div","",t.pickup_only?("pickup only"+(t.distance_miles!=null?", "+t.distance_miles+" mi":", distance unknown")):"buyer-arranged shipping")); return d;};
+  const item=r=>{const t=el("td","item"); t.append(el("div","title",r.title)); if(r.url){const a=el("a","bid","open listing ↗"); a.href=r.url; a.target="_blank"; a.rel="noopener noreferrer"; t.append(a);} return t;};
+  $("extvbody").replaceChildren(...X.verified.map(r=>{const e=r.evidence, tr=el("tr"), tdT=el("td"); tdT.append(terms(r));
+    tr.append(item(r), tdT, el("td","num",money(e.price_assumed)+" ("+money(e.all_in)+" all-in)"), el("td","meta",e.value_basis||(e.value_tier?e.value_tier.tier+" of "+e.value_tier.n+" comps":"")), el("td","num pos",money(e.net)+" ("+Math.round((e.return||0)*100)+"%)"), el("td","num",money(e.max_bid))); return tr;}));
+  $("extubody").replaceChildren(...X.unverified.map(r=>{const tr=el("tr"), tdT=el("td"), why=el("td"); tdT.append(terms(r)); for(const f of r.failures) why.append(el("div","meta",f.check+": "+f.why));
+    tr.append(item(r), tdT, el("td","num",money(r.bid)), el("td","neg",r.failed), why); return tr;}));
+  $("extlbody").replaceChildren(...X.leads.map(l=>{const tr=el("tr"), t=el("td","item"); t.append(el("div","title",l.title||l.lead_id)); if(l.url){const a=el("a","bid","open ↗"); a.href=l.url; a.target="_blank"; a.rel="noopener noreferrer"; t.append(a);}
+    tr.append(t, el("td","",l.label), el("td","",[l.location,l.distance_miles!=null?l.distance_miles+" mi":""].filter(Boolean).join(" · ")), el("td","",l.dates||""), el("td","meta",l.notes||"")); return tr;}));
+  labelTable("extvt"); labelTable("extut"); labelTable("extlt");
+}
 function renderGate(){
   const G=D.gate; const rb=$("repbox"), ub=$("unvbox");
   if(!G){rb.hidden=true; ub.hidden=true; return;}
@@ -1138,6 +1162,7 @@ function renderScrap(){
   $("gotx").addEventListener("click",ev=>{ev.preventDefault(); $("plat").value="txauction"; $("minp").checked=false; $("soon").checked=false; $("noest").checked=false; render(); $("t").scrollIntoView();});})();
 render();
 renderWatch();
+renderExt();
 renderGate();
 renderLux();
 renderFb();
@@ -1169,7 +1194,7 @@ def fashion_tier(r: dict) -> str:
     return "everyday"
 
 
-def render(rows: list[dict], refreshed: bool = False, now: datetime | None = None, watch: list[dict] | None = None, scrap: list[dict] | None = None, picks: list[dict] | None = None, fb: dict | None = None, lux: dict | None = None, gate: dict | None = None) -> str:
+def render(rows: list[dict], refreshed: bool = False, now: datetime | None = None, watch: list[dict] | None = None, scrap: list[dict] | None = None, picks: list[dict] | None = None, fb: dict | None = None, lux: dict | None = None, gate: dict | None = None, ext: dict | None = None) -> str:
     slim = []
     by_key = {(x.get("source"), str(x.get("lot"))): x for x in (picks or []) if x.get("value")}
     for r in rows:
@@ -1188,6 +1213,7 @@ def render(rows: list[dict], refreshed: bool = False, now: datetime | None = Non
                "watch": [{**w_, "url": safe_url(w_.get("url") or "")} for w_ in (watch or [])],
                "scrap": [{**a_, "url": safe_url(a_.get("url") or "")} for a_ in (scrap or [])],
                "picks": [{k_: v_ for k_, v_ in x.items() if k_ != "specs"} | {"url": safe_url(x.get("url") or "")} for x in (picks or [])],
+               "ext": ({"bar": ext["bar"], "leads": ext["leads"], **{g_: [{**r_, "url": safe_url(r_.get("url") or "")} for r_ in ext[g_]] for g_ in ("verified", "unverified")}} if ext else None),
                "gate": ({"bar": gate["bar"], "unverified": [{**g_, "url": safe_url(g_.get("url") or "")} for g_ in gate["unverified"]],
                         "repair": {k_: [{**g_, "url": safe_url(g_.get("url") or "")} for g_ in gate["repair"][k_]] for k_ in ("verified", "unverified")}} if gate else None),
                "lux": ({"bar": lux["bar"], **{g_: [{**r_, "url": safe_url(r_.get("url") or "")} for r_ in lux[g_]] for g_ in ("verified", "unverified")}} if lux else None),
@@ -1195,10 +1221,10 @@ def render(rows: list[dict], refreshed: bool = False, now: datetime | None = Non
     return _TEMPLATE.replace("__DATA__", _json_for_html(payload))
 
 
-def write_site(path: str | Path, rows: list[dict], refreshed: bool = False, watch: list[dict] | None = None, scrap: list[dict] | None = None, picks: list[dict] | None = None, fb: dict | None = None, lux: dict | None = None, gate: dict | None = None) -> Path:
+def write_site(path: str | Path, rows: list[dict], refreshed: bool = False, watch: list[dict] | None = None, scrap: list[dict] | None = None, picks: list[dict] | None = None, fb: dict | None = None, lux: dict | None = None, gate: dict | None = None, ext: dict | None = None) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render(rows, refreshed, watch=watch, scrap=scrap, picks=picks, fb=fb, lux=lux, gate=gate), encoding="utf-8")
+    path.write_text(render(rows, refreshed, watch=watch, scrap=scrap, picks=picks, fb=fb, lux=lux, gate=gate, ext=ext), encoding="utf-8")
     return path
 
 

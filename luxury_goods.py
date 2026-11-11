@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 import catalog
 import evidence
 import repair
+import sell_channels
 from engine.luxury_authenticator import LuxuryAuthenticator
 from engine.title_cleaner import model_identity
 
@@ -279,7 +280,7 @@ def authenticity(title: str, description: str) -> dict:
 
 
 # ---------------------------------------------------------------- the gate
-def _best_channel(value: float, tier: str, kind: str) -> tuple[str, dict]:
+def _best_channel(value: float, tier: str, kind: str, title: str = "") -> tuple[str, dict]:
     res = {}
     for name, (fn, ship, tiers, src) in CHANNELS.items():
         if tier not in tiers or (name.startswith("Fashionphile") and kind != "bag"):
@@ -289,6 +290,10 @@ def _best_channel(value: float, tier: str, kind: str) -> tuple[str, dict]:
         net_sale = fn(value)
         rev = net_sale - order - ship_out
         res[name] = {"revenue": round(rev, 2), "fee": round(1 - net_sale / value, 4) if value else 0.0, "ship_out": ship_out, "order_fee": order, "source": src}
+    for name, o in sell_channels.options(kind, title, value, 14.0 if kind == "bag" else 10.0).items():  # Depop, Grailed, Mercari, ... (counted ones only)
+        if o["counts"]:
+            res[name] = {"revenue": o["revenue"], "fee": round(o["fee"] / o["sale_price"], 4) if o["sale_price"] else 0.0, "ship_out": 0.0, "order_fee": 0.0,
+                         "source": f"{o['note']} [{o['price_basis']}]"}
     best = max(res, key=lambda n: res[n]["revenue"])
     return best, res
 
@@ -385,7 +390,7 @@ def assess(conn: sqlite3.Connection, item: dict, now: datetime | None = None) ->
     ev["auth"] = {"verdict": au["verdict"], "probability_genuine": p, "third_party_cost": auth_cost, "cost_source": AUTH_COST_SOURCE, "probability_source": "ASSUMPTION, not measured"}
     out_plays = {}
     for play, pl in plays.items():
-        best, chans = _best_channel(pl["value"], tier, kind)
+        best, chans = _best_channel(pl["value"], tier, kind, title)
         rev = chans[best]["revenue"]
         price = max(item["bid"] or 0.0, (item.get("climb") or 0.0) * pl["value"])  # an auction climbs toward its usual share of resale value
         buy_all_in = price * (1 + prem) * (1 + tax) + inbound
@@ -404,6 +409,13 @@ def assess(conn: sqlite3.Connection, item: dict, now: datetime | None = None) ->
                            "max_price": round(max(0.0, min(p * (rev - repair_cost) - auth_cost - need,
                                                            (p * (rev - repair_cost) - auth_cost - MIN_RETURN * (auth_cost + p * repair_cost)) / (1 + MIN_RETURN)
                                                            ) - inbound) / ((1 + prem) * (1 + tax)), 2)}
+    floors = sell_channels.buyout_floors("bag" if kind == "bag" else kind, title, plays.get("as-is", next(iter(plays.values())))["value"]) if kind == "bag" else []
+    if floors and floors[0]["low"] is not None:
+        c0 = out_plays.get("as-is") or next(iter(out_plays.values()))
+        fnet = p * floors[0]["low"] - c0["buy_all_in"] - auth_cost  # the floor is paid only if the bag passes authentication
+        fret = fnet / (c0["buy_all_in"] + auth_cost) if (c0["buy_all_in"] + auth_cost) else None
+        ev["buyout_floor"] = {"floors": floors, "net_at_low_floor": round(fnet, 2), "return_at_low_floor": round(fret, 3) if fret is not None else None,
+                              "clears_at_floor": sell_channels.floor_signal(fnet, fret, MIN_NET, MIN_RETURN)}
     ev["plays"] = {k: {kk: vv for kk, vv in v.items() if kk != "channels"} for k, v in out_plays.items()}
     ev["channel_sources"] = {n: src for n, (f, sh, t, src) in CHANNELS.items()}
     ev["channel_price_note"] = CHANNEL_PRICE_NOTE

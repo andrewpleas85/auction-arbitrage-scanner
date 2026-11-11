@@ -167,3 +167,12 @@ def test_page_renders_verified_and_unverified_designer_sections(conn):
                                                              "repair_cushion": repair.REPAIR_CUSHION, "recent_needed": lg.MIN_RECENT_SALES, "p_auth": lg.P_AUTH}}
     html = webpage.render([], lux=payload)
     assert 'id="luxbox"' in html and "authenticity first" in html and "renderLux()" in html and "damage (value-killing)" in html
+
+
+def test_a_bag_that_clears_even_at_the_rebag_buyout_floor_is_flagged(conn):
+    seed_lv(conn)
+    r = lg.assess(conn, item("Original receipt, date code SD1234. Excellent condition.", bid=60), NOW)
+    ev = r["evidence"]
+    assert r["status"] == "verified" and ev["buyout_floor"]["clears_at_floor"] is True and ev["buyout_floor"]["floors"][0]["name"] == "Rebag buyout"
+    pricey = lg.assess(conn, item("Original receipt, date code SD1234. Excellent condition.", bid=1500), NOW)
+    assert not pricey["evidence"]["buyout_floor"]["clears_at_floor"]
